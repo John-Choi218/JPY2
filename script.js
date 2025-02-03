@@ -567,12 +567,34 @@ async function checkNotificationPermission() {
     }
 }
 
+// Service Worker 등록 상태 확인
+async function checkServiceWorker() {
+    try {
+        const registration = await navigator.serviceWorker.getRegistration();
+        console.log('현재 Service Worker 상태:', registration);
+        
+        // 기존 Service Worker 제거 후 재등록
+        if (registration) {
+            await registration.unregister();
+            console.log('기존 Service Worker 제거됨');
+        }
+        
+        const newRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+        console.log('새로운 Service Worker 등록됨:', newRegistration);
+        
+        return newRegistration;
+    } catch (error) {
+        console.error('Service Worker 확인/등록 실패:', error);
+        throw error;
+    }
+}
+
 // FCM 초기화 함수 수정
 async function initializeFCM() {
     try {
         // Service Worker 등록
         if ('serviceWorker' in navigator) {
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            const registration = await checkServiceWorker();
             console.log('Service Worker 등록 성공:', registration);
         } else {
             throw new Error('이 브라우저는 Service Worker를 지원하지 않습니다.');
@@ -745,18 +767,43 @@ async function checkRateAndNotify(currentRate) {
     });
 }
 
-// 테스트 알림 함수
+// 테스트 알림 함수 수정
 async function sendTestNotification() {
     try {
+        if (!messagingToken) {
+            console.error('FCM 토큰이 없습니다!');
+            Swal.fire({
+                icon: 'error',
+                title: '알림 전송 실패',
+                text: 'FCM 토큰이 없습니다. 페이지를 새로고침하고 다시 시도해주세요.'
+            });
+            return;
+        }
+
+        console.log('테스트 알림 전송 시도...');
+        console.log('사용할 FCM 토큰:', messagingToken);
+        
         await db.collection('notifications').add({
             token: messagingToken,
             title: '테스트 알림',
             body: '이것은 테스트 알림입니다. ' + new Date().toLocaleString(),
             timestamp: firebase.firestore.FieldValue.serverTimestamp()
         });
+        
         console.log('테스트 알림 요청 완료');
+        
+        Swal.fire({
+            icon: 'success',
+            title: '알림 전송 완료',
+            text: '알림이 전송되었습니다. 잠시 후 알림이 도착해야 합니다.'
+        });
     } catch (error) {
         console.error('테스트 알림 실패:', error);
+        Swal.fire({
+            icon: 'error',
+            title: '알림 전송 실패',
+            text: '오류: ' + error.message
+        });
     }
 }
 
