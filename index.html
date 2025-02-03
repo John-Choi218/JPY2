@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>엔화 투자 장부</title>
+    <link rel="manifest" href="./manifest.json">
+    <link rel="stylesheet" href="style.css">
+    <link rel="icon" type="image/png" sizes="192x192" href="images/icon-192.png">
+    <link rel="apple-touch-icon" sizes="192x192" href="images/icon-192.png">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+</head>
+<body>
+    <div class="container">
+        <h1>엔화 투자 장부</h1>
+        
+        <!-- 현재 환율 표시 섹션 추가 -->
+        <div class="current-rate">
+            <h3>현재 환율 (100엔)</h3>
+            <p id="currentRate">로딩중...</p>
+        </div>
+        
+        <!-- 설정 버튼 추가 -->
+        <div class="header-actions">
+            <button id="openSettings" class="settings-button">
+                ⚙️ 설정
+            </button>
+        </div>
+        
+        <!-- 투자 입력 폼 -->
+        <div class="input-section">
+            <h2>새로운 투자 입력</h2>
+            <form id="investmentForm">
+                <div class="form-group">
+                    <label for="purchaseDate">구매 날짜</label>
+                    <input type="date" id="purchaseDate" required>
+                </div>
+                <div class="form-group">
+                    <label for="amountYen">엔화 금액</label>
+                    <input type="number" id="amountYen" inputmode="numeric" required>
+                </div>
+                <div class="form-group">
+                    <label for="exchangeRate">구매 환율 (100엔 기준)</label>
+                    <input type="number" id="exchangeRate" step="0.01" inputmode="decimal" required>
+                </div>
+                <button type="submit">추가</button>
+            </form>
+        </div>
+
+        <!-- 현재 투자 목록 -->
+        <div class="current-investments">
+            <h2>현재 투자 현황</h2>
+            <div class="table-container">
+                <table id="currentInvestmentsTable">
+                    <thead>
+                        <tr>
+                            <th>날짜</th>
+                            <th>엔화 금액</th>
+                            <th>구매 환율</th>
+                            <th>투자 금액(원)</th>
+                            <th>작업</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- 투자 실적 -->
+        <div class="investment-history">
+            <h2>투자 실적</h2>
+            <div class="summary-cards">
+                <div class="card">
+                    <h3>총 수익</h3>
+                    <p id="totalProfit">0원</p>
+                </div>
+                <div class="card">
+                    <h3>평균 수익률</h3>
+                    <p id="averageReturn">0%</p>
+                </div>
+            </div>
+            <div class="table-container">
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>구매일</th>
+                            <th>매도일</th>
+                            <th>엔화 금액</th>
+                            <th>구매 환율</th>
+                            <th>매도 환율</th>
+                            <th>수익/손실</th>
+                            <th>수익률</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // 서비스 워커 등록
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(registration => {
+                        console.log('서비스 워커가 등록되었습니다:', registration);
+                    })
+                    .catch(error => {
+                        console.log('서비스 워커 등록 실패:', error);
+                    });
+            });
+        }
+    </script>
+</body>
+</html>
