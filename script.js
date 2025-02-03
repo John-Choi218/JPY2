@@ -967,3 +967,74 @@ async function updateCurrentRate() {
         }
     }
 }
+
+// 환율 정보 가져오기 함수
+async function fetchExchangeRate() {
+    try {
+        console.log('환율 정보 요청 시작');
+        const response = await fetch('https://m.search.naver.com/p/csearch/content/qapirender.nhn?key=calculator&pkid=141&q=%ED%99%98%EC%9C%A8&where=m&u1=keb&u6=standardUnit&u7=0&u3=JPY&u4=KRW&u8=down&u2=100', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('네이버 환율 데이터:', data);
+        
+        if (data && data.country && data.country[1]) {
+            const rate = parseFloat(data.country[1].value.replace(/,/g, '')).toFixed(2);
+            console.log('현재 환율:', rate);
+            
+            // 환율 표시 업데이트 (ID 수정)
+            const rateElement = document.getElementById('currentRate');
+            if (rateElement) {
+                const now = new Date();
+                rateElement.textContent = `${rate}원 (${now.toLocaleTimeString()})`;
+                console.log('환율 표시 업데이트됨:', rateElement.textContent);
+            } else {
+                console.error('환율 표시 요소를 찾을 수 없음 (ID: currentRate)');
+            }
+            
+            return parseFloat(rate);
+        } else {
+            throw new Error('환율 데이터를 찾을 수 없습니다');
+        }
+    } catch (error) {
+        console.error('환율 정보 가져오기 실패:', error);
+        console.error('상세 에러:', error.message);
+        
+        // 사용자에게 오류 알림
+        Swal.fire({
+            icon: 'error',
+            title: '환율 정보 오류',
+            text: '현재 환율 정보를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.',
+            confirmButtonText: '확인'
+        });
+        
+        const rateElement = document.getElementById('currentRate');
+        if (rateElement) {
+            rateElement.textContent = '환율 정보 없음';
+        }
+        
+        return null;
+    }
+}
+
+// 주기적으로 환율 업데이트
+function startExchangeRateUpdates() {
+    // 즉시 한 번 실행
+    fetchExchangeRate();
+    
+    // 5분마다 업데이트
+    setInterval(fetchExchangeRate, 5 * 60 * 1000);
+}
+
+// 페이지 로드 시 환율 업데이트 시작
+document.addEventListener('DOMContentLoaded', () => {
+    startExchangeRateUpdates();
+});
