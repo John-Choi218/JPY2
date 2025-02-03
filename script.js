@@ -802,71 +802,73 @@ async function checkRateAndNotify(currentRate) {
 // 테스트 알림 함수 수정
 async function sendTestNotification() {
     try {
-        if (!messagingToken) {
-            console.error('FCM 토큰이 없습니다!');
-            Swal.fire({
-                icon: 'error',
-                title: '알림 전송 실패',
-                text: 'FCM 토큰이 없습니다. 알림 설정을 다시 해주세요.'
-            });
-            return;
-        }
-
-        console.log('테스트 알림 전송 시도...');
-        console.log('사용할 FCM 토큰:', messagingToken);
+        console.log('테스트 알림 시작...');
         
-        // 포그라운드 메시지 테스트
+        if (!messagingToken) {
+            console.error('FCM 토큰 없음!');
+            throw new Error('FCM 토큰이 없습니다. 알림 설정을 다시 해주세요.');
+        }
+        
+        console.log('현재 FCM 토큰:', messagingToken);
+        
+        // 서비스 워커 상태 확인
+        const registration = await navigator.serviceWorker.getRegistration();
+        console.log('현재 Service Worker 상태:', registration);
+        
+        // Firestore에 알림 요청 저장
+        const notificationRef = await db.collection('notifications').add({
+            token: messagingToken,
+            title: '테스트 알림',
+            body: `테스트 알림입니다. (${new Date().toLocaleString()})`,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            type: 'test'
+        });
+        
+        console.log('알림 요청 Firestore에 저장됨:', notificationRef.id);
+        
+        // 로컬 알림 즉시 표시
+        if (registration) {
+            console.log('로컬 알림 표시 시도...');
+            await registration.showNotification('테스트 알림 (로컬)', {
+                body: `로컬 테스트 알림입니다. (${new Date().toLocaleString()})`,
+                icon: '/icon.png',
+                vibrate: [200, 100, 200],
+                tag: 'test-notification'
+            });
+            console.log('로컬 알림 표시 완료');
+        }
+        
+        // 포그라운드 메시지 핸들러 설정
         const messaging = firebase.messaging();
         messaging.onMessage((payload) => {
             console.log('포그라운드 메시지 수신:', payload);
             
-            // 알림 표시
-            if ('serviceWorker' in navigator && 'PushManager' in window) {
-                const options = {
+            if (registration) {
+                registration.showNotification(payload.notification.title, {
                     body: payload.notification.body,
-                    icon: '/icon.png',  // 알림 아이콘 (선택사항)
-                    vibrate: [200, 100, 200]
-                };
-                
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.showNotification(payload.notification.title, options);
+                    icon: '/icon.png',
+                    vibrate: [200, 100, 200],
+                    tag: 'fcm-notification'
                 });
             }
         });
         
-        // Firestore에 알림 요청 저장
-        await db.collection('notifications').add({
-            token: messagingToken,
-            title: '테스트 알림',
-            body: '이것은 테스트 알림입니다. ' + new Date().toLocaleString(),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-            type: 'test'  // 알림 타입 추가
-        });
-        
-        console.log('테스트 알림 요청 완료');
-        
-        // 즉시 로컬 알림 표시
-        if ('serviceWorker' in navigator && 'PushManager' in window) {
-            const registration = await navigator.serviceWorker.ready;
-            await registration.showNotification('테스트 알림', {
-                body: '이것은 로컬 테스트 알림입니다. ' + new Date().toLocaleString(),
-                icon: '/icon.png',
-                vibrate: [200, 100, 200]
-            });
-        }
+        console.log('테스트 알림 프로세스 완료');
         
         Swal.fire({
             icon: 'success',
             title: '알림 전송 완료',
             text: '알림이 전송되었습니다. 잠시 후 알림이 도착해야 합니다.'
         });
+        
     } catch (error) {
         console.error('테스트 알림 실패:', error);
         console.error('상세 에러:', error.message);
+        
         Swal.fire({
             icon: 'error',
             title: '알림 전송 실패',
-            text: '오류: ' + error.message
+            text: `오류: ${error.message}`
         });
     }
 }
