@@ -1201,27 +1201,6 @@ async function fetchExchangeRate() {
                 console.log('환율 표시 업데이트됨:', rateElement.textContent);
             }
             
-            // 환율 변동 확인 및 알림
-            if (oldRateNum && Math.abs(newRate - oldRateNum) >= 0.1) { // 0.1원 이상 변동 시
-                console.log('환율 변동 감지:', { old: oldRateNum, new: newRate });
-                
-                // 변동 방향 확인
-                const difference = (newRate - oldRateNum).toFixed(2);
-                const direction = difference > 0 ? '상승' : '하락';
-                
-                // 알림 전송
-                await sendNotification(
-                    '환율 변동 알림',
-                    `환율이 ${Math.abs(difference)}원 ${direction}했습니다.\n현재: ${newRate}원/100엔`,
-                    {
-                        type: 'rate_change',
-                        oldRate: oldRateNum,
-                        newRate: newRate,
-                        difference: difference
-                    }
-                );
-            }
-            
             // 현재 환율 저장
             localStorage.setItem('lastRate', newRate);
             
@@ -1248,45 +1227,8 @@ async function fetchExchangeRate() {
 
 // 목표 환율 확인 함수
 async function checkTargetRates(currentRate) {
-    try {
-        const targets = JSON.parse(localStorage.getItem('targetRates') || '[]');
-        
-        for (const target of targets) {
-            if (!target.notified) {  // 아직 알림을 보내지 않은 목표만 확인
-                if (target.type === 'upper' && currentRate >= target.rate) {
-                    await sendNotification(
-                        '상향 목표 환율 도달!',
-                        `현재 환율(${currentRate}원)이 목표치(${target.rate}원)를 넘었습니다.`,
-                        {
-                            type: 'target_reached',
-                            targetType: 'upper',
-                            currentRate: currentRate,
-                            targetRate: target.rate
-                        }
-                    );
-                    target.notified = true; // 알림 상태 업데이트
-                } else if (target.type === 'lower' && currentRate <= target.rate) {
-                    await sendNotification(
-                        '하향 목표 환율 도달!',
-                        `현재 환율(${currentRate}원)이 목표치(${target.rate}원) 이하로 내려갔습니다.`,
-                        {
-                            type: 'target_reached',
-                            targetType: 'lower',
-                            currentRate: currentRate,
-                            targetRate: target.rate
-                        }
-                    );
-                    target.notified = true; // 알림 상태 업데이트
-                }
-            }
-        }
-        
-        // 알림 상태가 업데이트된 목표들 저장
-        localStorage.setItem('targetRates', JSON.stringify(targets));
-        
-    } catch (error) {
-        console.error('목표 환율 확인 중 오류:', error);
-    }
+    // 이 함수는 이제 환율 변동 알림을 보내지 않습니다.
+    // 필요한 경우 이곳에 다른 로직을 추가할 수 있습니다.
 }
 
 // 투자 알림 체크 함수
@@ -1338,8 +1280,8 @@ function startExchangeRateUpdates() {
     // 즉시 한 번 실행
     fetchExchangeRate();
     
-    // 1분마다 업데이트 (더 자주 확인)
-    setInterval(fetchExchangeRate, 60 * 1000);
+    // 5분마다 업데이트 (5분 = 5 * 60 * 1000 밀리초)
+    setInterval(fetchExchangeRate, 5 * 60 * 1000);
 }
 
 // 페이지 로드 시 환율 업데이트 시작
