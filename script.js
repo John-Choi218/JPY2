@@ -578,21 +578,21 @@ function sendNotification(title, message) {
 // 환율 체크 및 알림 함수
 function checkRateAndNotify(currentRate) {
     currentInvestments.forEach(inv => {
-        // 매수 목표가 체크
-        const buyTarget = inv.exchangeRate - 5;
+        // 매수 목표가 체크 (테이블에 표시된 매수 목표가 기준)
+        const buyTarget = inv.exchangeRate - settings.buyThreshold;
         if (currentRate <= buyTarget) {
             sendNotification(
                 '매수 기회!', 
-                `${inv.date.split('T')[0]} 매수건의 목표가(${buyTarget}원)에 도달했습니다. 현재 환율: ${currentRate}원`
+                `${new Date(inv.date).toLocaleDateString()} 매수건의 매수 목표가(${buyTarget.toFixed(2)}원)에 도달했습니다. 현재 환율: ${currentRate}원`
             );
         }
         
-        // 매도 목표가 체크
-        const sellTarget = inv.exchangeRate + 5;
+        // 매도 목표가 체크 (테이블에 표시된 매도 목표가 기준)
+        const sellTarget = inv.exchangeRate + settings.sellThreshold;
         if (currentRate >= sellTarget) {
             sendNotification(
                 '매도 기회!', 
-                `${inv.date.split('T')[0]} 매수건의 목표가(${sellTarget}원)에 도달했습니다. 현재 환율: ${currentRate}원`
+                `${new Date(inv.date).toLocaleDateString()} 매수건의 매도 목표가(${sellTarget.toFixed(2)}원)에 도달했습니다. 현재 환율: ${currentRate}원`
             );
         }
     });
