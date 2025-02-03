@@ -581,8 +581,8 @@ async function registerServiceWorker() {
     
     if (isGitHubPages) {
         // GitHub Pages 환경
-        swPath = 'firebase-messaging-sw.js';
-        scope = './';
+        swPath = '/JPY2/firebase-messaging-sw.js';  // 전체 경로 지정
+        scope = '/JPY2/';  // 전체 경로 지정
     } else {
         // 로컬 환경
         swPath = '/firebase-messaging-sw.js';
@@ -599,7 +599,11 @@ async function registerServiceWorker() {
             await existingRegistration.unregister();
         }
         
+        // 잠시 대기 (Service Worker 제거 완료를 위해)
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         // 새 Service Worker 등록
+        console.log('새 Service Worker 등록 시도:', { swPath, scope });
         const registration = await navigator.serviceWorker.register(swPath, { scope: scope });
         console.log('Service Worker 등록 성공:', registration);
         
@@ -611,16 +615,21 @@ async function registerServiceWorker() {
     } catch (error) {
         console.error('Service Worker 등록 실패:', error);
         
-        // 다른 경로로 재시도
-        try {
-            const altPath = './firebase-messaging-sw.js';
-            console.log('대체 경로로 재시도:', altPath);
-            const registration = await navigator.serviceWorker.register(altPath);
-            console.log('대체 경로로 등록 성공:', registration);
-            return registration;
-        } catch (retryError) {
-            console.error('대체 경로로도 실패:', retryError);
-            throw retryError;
+        if (isGitHubPages) {
+            // GitHub Pages에서 다른 경로 시도
+            try {
+                const altPath = 'firebase-messaging-sw.js';
+                const altScope = './';
+                console.log('대체 경로로 재시도:', { altPath, altScope });
+                const registration = await navigator.serviceWorker.register(altPath, { scope: altScope });
+                console.log('대체 경로로 등록 성공:', registration);
+                return registration;
+            } catch (retryError) {
+                console.error('대체 경로로도 실패:', retryError);
+                throw retryError;
+            }
+        } else {
+            throw error;
         }
     }
 }
