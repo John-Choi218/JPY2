@@ -7,7 +7,8 @@
 body {
     font-family: 'Noto Sans KR', sans-serif;
     line-height: 1.6;
-    background-color: #f5f5f5;
+    background-color: #ffffff;
+    color: #000000;
     -webkit-text-size-adjust: 100%;
 }
 
@@ -290,5 +291,18 @@ th {
     .current-rate {
         position: static;
         margin-bottom: 20px;
+    }
+}
+
+/* 다크 모드 스타일: 운영체제의 다크 모드 활용 */
+@media (prefers-color-scheme: dark) {
+    body {
+        background-color: #121212;
+        color: #e0e0e0;
+    }
+    
+    /* 예시: 링크, 버튼 등 추가로 필요한 요소들 스타일 지정 */
+    a {
+        color: #82aaff;
     }
 }
