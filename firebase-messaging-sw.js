@@ -12,16 +12,40 @@ firebase.initializeApp({
 
 const messaging = firebase.messaging();
 
+// 백그라운드 메시지 처리
 messaging.onBackgroundMessage((payload) => {
     console.log('백그라운드 메시지 수신:', payload);
     
     const notificationTitle = payload.notification.title;
     const notificationOptions = {
         body: payload.notification.body,
-        icon: '/images/icon-192.png',
-        badge: '/images/badge-72.png',
-        vibrate: [200, 100, 200]
+        icon: '/icon.png',
+        vibrate: [200, 100, 200],
+        data: payload.data
     };
     
     return self.registration.showNotification(notificationTitle, notificationOptions);
+});
+
+// 알림 클릭 처리
+self.addEventListener('notificationclick', (event) => {
+    console.log('알림 클릭됨:', event);
+    
+    event.notification.close();
+    
+    // 알림 클릭 시 앱/사이트 열기
+    event.waitUntil(
+        clients.matchAll({type: 'window'}).then(windowClients => {
+            // 이미 열린 창이 있으면 포커스
+            for (let client of windowClients) {
+                if (client.url === '/' && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            // 없으면 새 창 열기
+            if (clients.openWindow) {
+                return clients.openWindow('/');
+            }
+        })
+    );
 }); 
