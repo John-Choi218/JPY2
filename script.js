@@ -1186,34 +1186,55 @@ async function fetchExchangeRate() {
         console.log('네이버 환율 데이터:', data);
         
         if (data && data.country && data.country[1]) {
-            const rate = parseFloat(data.country[1].value.replace(/,/g, '')).toFixed(2);
-            console.log('현재 환율:', rate);
+            const newRate = parseFloat(data.country[1].value.replace(/,/g, '')).toFixed(2);
+            console.log('현재 환율:', newRate);
             
-            // 환율 표시 업데이트 (ID 수정)
+            // 이전 환율 가져오기
+            const oldRate = localStorage.getItem('lastRate');
+            const oldRateNum = oldRate ? parseFloat(oldRate) : null;
+            
+            // 환율 표시 업데이트
             const rateElement = document.getElementById('currentRate');
             if (rateElement) {
                 const now = new Date();
-                rateElement.textContent = `${rate}원 (${now.toLocaleTimeString()})`;
+                rateElement.textContent = `${newRate}원 (${now.toLocaleTimeString()})`;
                 console.log('환율 표시 업데이트됨:', rateElement.textContent);
-            } else {
-                console.error('환율 표시 요소를 찾을 수 없음 (ID: currentRate)');
             }
             
-            return parseFloat(rate);
+            // 환율 변동 확인 및 알림
+            if (oldRateNum && Math.abs(newRate - oldRateNum) >= 0.1) { // 0.1원 이상 변동 시
+                console.log('환율 변동 감지:', { old: oldRateNum, new: newRate });
+                
+                // 변동 방향 확인
+                const difference = (newRate - oldRateNum).toFixed(2);
+                const direction = difference > 0 ? '상승' : '하락';
+                
+                // 알림 전송
+                await sendNotification(
+                    '환율 변동 알림',
+                    `환율이 ${Math.abs(difference)}원 ${direction}했습니다.\n현재: ${newRate}원/100엔`,
+                    {
+                        type: 'rate_change',
+                        oldRate: oldRateNum,
+                        newRate: newRate,
+                        difference: difference
+                    }
+                );
+            }
+            
+            // 현재 환율 저장
+            localStorage.setItem('lastRate', newRate);
+            
+            // 목표 환율 확인
+            checkTargetRates(newRate);
+            
+            return parseFloat(newRate);
         } else {
             throw new Error('환율 데이터를 찾을 수 없습니다');
         }
     } catch (error) {
         console.error('환율 정보 가져오기 실패:', error);
         console.error('상세 에러:', error.message);
-        
-        // 사용자에게 오류 알림
-        Swal.fire({
-            icon: 'error',
-            title: '환율 정보 오류',
-            text: '현재 환율 정보를 가져올 수 없습니다. 잠시 후 다시 시도해주세요.',
-            confirmButtonText: '확인'
-        });
         
         const rateElement = document.getElementById('currentRate');
         if (rateElement) {
@@ -1224,13 +1245,56 @@ async function fetchExchangeRate() {
     }
 }
 
-// 주기적으로 환율 업데이트
+// 목표 환율 확인 함수
+async function checkTargetRates(currentRate) {
+    try {
+        const targets = JSON.parse(localStorage.getItem('targetRates') || '[]');
+        
+        for (const target of targets) {
+            if (!target.notified) {  // 아직 알림을 보내지 않은 목표만 확인
+                if (target.type === 'upper' && currentRate >= target.rate) {
+                    await sendNotification(
+                        '상향 목표 환율 도달!',
+                        `현재 환율(${currentRate}원)이 목표치(${target.rate}원)를 넘었습니다.`,
+                        {
+                            type: 'target_reached',
+                            targetType: 'upper',
+                            currentRate: currentRate,
+                            targetRate: target.rate
+                        }
+                    );
+                    target.notified = true;
+                } else if (target.type === 'lower' && currentRate <= target.rate) {
+                    await sendNotification(
+                        '하향 목표 환율 도달!',
+                        `현재 환율(${currentRate}원)이 목표치(${target.rate}원) 이하로 내려갔습니다.`,
+                        {
+                            type: 'target_reached',
+                            targetType: 'lower',
+                            currentRate: currentRate,
+                            targetRate: target.rate
+                        }
+                    );
+                    target.notified = true;
+                }
+            }
+        }
+        
+        // 알림 상태가 업데이트된 목표들 저장
+        localStorage.setItem('targetRates', JSON.stringify(targets));
+        
+    } catch (error) {
+        console.error('목표 환율 확인 중 오류:', error);
+    }
+}
+
+// 환율 업데이트 주기 설정
 function startExchangeRateUpdates() {
     // 즉시 한 번 실행
     fetchExchangeRate();
     
-    // 5분마다 업데이트
-    setInterval(fetchExchangeRate, 5 * 60 * 1000);
+    // 1분마다 업데이트 (더 자주 확인)
+    setInterval(fetchExchangeRate, 60 * 1000);
 }
 
 // 페이지 로드 시 환율 업데이트 시작
