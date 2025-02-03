@@ -569,33 +569,63 @@ async function checkNotificationPermission() {
 
 // Service Worker 등록 함수 수정
 async function registerServiceWorker() {
-    // 현재 URL이 localhost 또는 127.0.0.1인지 확인
-    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    // 현재 전체 URL 확인
+    const currentUrl = window.location.href;
+    console.log('현재 URL:', currentUrl);
     
-    // 기본 경로 설정
-    const basePath = isLocal ? '' : '/JPY2';
-    const swPath = `${basePath}/firebase-messaging-sw.js`;
-    const scope = `${basePath}/`;
+    // GitHub Pages인지 확인
+    const isGitHubPages = currentUrl.includes('github.io');
+    console.log('GitHub Pages 여부:', isGitHubPages);
     
-    console.log('Service Worker 등록 시도:', { swPath, scope });
+    let swPath, scope;
+    
+    if (isGitHubPages) {
+        // GitHub Pages 환경
+        swPath = 'firebase-messaging-sw.js';
+        scope = './';
+    } else {
+        // 로컬 환경
+        swPath = '/firebase-messaging-sw.js';
+        scope = '/';
+    }
+    
+    console.log('Service Worker 설정:', { swPath, scope });
     
     try {
+        // 기존 Service Worker 제거
+        const existingRegistration = await navigator.serviceWorker.getRegistration();
+        if (existingRegistration) {
+            console.log('기존 Service Worker 제거');
+            await existingRegistration.unregister();
+        }
+        
+        // 새 Service Worker 등록
         const registration = await navigator.serviceWorker.register(swPath, { scope: scope });
         console.log('Service Worker 등록 성공:', registration);
+        
+        // Service Worker 활성화 대기
+        await navigator.serviceWorker.ready;
+        console.log('Service Worker 활성화됨');
+        
         return registration;
     } catch (error) {
         console.error('Service Worker 등록 실패:', error);
-        // 로컬 환경에서 다른 경로 시도
-        if (isLocal) {
-            const altPath = 'firebase-messaging-sw.js';
+        
+        // 다른 경로로 재시도
+        try {
+            const altPath = './firebase-messaging-sw.js';
             console.log('대체 경로로 재시도:', altPath);
-            return await navigator.serviceWorker.register(altPath);
+            const registration = await navigator.serviceWorker.register(altPath);
+            console.log('대체 경로로 등록 성공:', registration);
+            return registration;
+        } catch (retryError) {
+            console.error('대체 경로로도 실패:', retryError);
+            throw retryError;
         }
-        throw error;
     }
 }
 
-// FCM 초기화 함수 수정
+// FCM 초기화 함수는 동일
 async function initializeFCM() {
     try {
         console.log('FCM 초기화 시작...');
@@ -611,7 +641,7 @@ async function initializeFCM() {
         // Service Worker 등록
         if ('serviceWorker' in navigator) {
             const registration = await registerServiceWorker();
-            console.log('Service Worker 활성화됨:', registration);
+            console.log('Service Worker 등록 완료:', registration);
         } else {
             throw new Error('이 브라우저는 Service Worker를 지원하지 않습니다.');
         }
