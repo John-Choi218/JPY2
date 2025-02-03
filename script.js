@@ -592,6 +592,8 @@ async function checkServiceWorker() {
 // FCM 초기화 함수 수정
 async function initializeFCM() {
     try {
+        console.log('FCM 초기화 시작...');
+        
         // Service Worker 등록
         if ('serviceWorker' in navigator) {
             const registration = await checkServiceWorker();
@@ -601,11 +603,13 @@ async function initializeFCM() {
         }
 
         const messaging = firebase.messaging();
+        console.log('Firebase Messaging 인스턴스 생성됨');
         
         // 알림 권한 상태 체크
         await checkNotificationPermission();
         
         // FCM 토큰 가져오기
+        console.log('FCM 토큰 요청 중...');
         messagingToken = await messaging.getToken({
             vapidKey: 'BL1Pu4t4Hrwq_qOAkM3QA4g5AjDyRZISVVWaf30VW0MEfPOyxYTfpiFj4tP1AhlPaAvaQtJvWyOXg-JFC4CxeVo',
             serviceWorkerRegistration: await navigator.serviceWorker.getRegistration()
@@ -615,6 +619,7 @@ async function initializeFCM() {
         // 토큰을 localStorage에 저장
         if (messagingToken) {
             localStorage.setItem('fcmToken', messagingToken);
+            console.log('FCM 토큰이 localStorage에 저장됨');
         }
         
         // 토큰 변경 감지
@@ -625,92 +630,39 @@ async function initializeFCM() {
                     serviceWorkerRegistration: await navigator.serviceWorker.getRegistration()
                 });
                 console.log('FCM 토큰 갱신됨:', messagingToken);
+                localStorage.setItem('fcmToken', messagingToken);
             } catch (error) {
                 console.error('토큰 갱신 실패:', error);
             }
         };
         
-        // 포그라운드 메시지 처리
-        messaging.onMessage((payload) => {
-            console.log('포그라운드 메시지 수신:', payload);
-            
-            // 알림 표시
-            if ('serviceWorker' in navigator && 'PushManager' in window) {
-                const options = {
-                    body: payload.notification.body,
-                    icon: '/images/icon-192.png',
-                    badge: '/images/badge-72.png',
-                    vibrate: [200, 100, 200]
-                };
-                
-                navigator.serviceWorker.ready.then(registration => {
-                    registration.showNotification(payload.notification.title, options);
-                });
-            }
-        });
-        
     } catch (error) {
         console.error('FCM 초기화 실패:', error);
         console.error('상세 에러:', error.message);
+        console.error('에러 스택:', error.stack);
         
         // localStorage에서 토큰 복구 시도
         messagingToken = localStorage.getItem('fcmToken');
-    }
-}
-
-// 환율 업데이트 함수
-async function updateCurrentRate() {
-    try {
-        const now = new Date();
-        console.log('환율 업데이트 시작:', now.toLocaleString());
-        
-        // 네이버 환율 API 호출 (JPY-KRW)
-        const response = await fetch('https://m.search.naver.com/p/csearch/content/qapirender.nhn?key=calculator&pkid=141&q=%ED%99%98%EC%9C%A8&where=m&u1=keb&u6=standardUnit&u7=0&u3=JPY&u4=KRW&u8=down&u2=100', {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('네이버 환율 데이터:', data);
-        
-        if (data && data.country && data.country[1]) {
-            const rate = parseFloat(data.country[1].value.replace(/,/g, '')).toFixed(2);
-            
-            console.log('=== 환율 정보 ===');
-            console.log('현재 시각:', now.toLocaleString());
-            console.log('100엔:', rate);
-            
-            const rateElement = document.getElementById('currentRate');
-            if (rateElement) {
-                rateElement.textContent = `${rate}원 (${now.toLocaleTimeString()})`;
-                console.log('환율 업데이트 완료');
-            }
-            
-            // 환율 체크 및 알림
-            checkRateAndNotify(parseFloat(rate));
+        if (messagingToken) {
+            console.log('localStorage에서 토큰 복구됨:', messagingToken);
         } else {
-            throw new Error('환율 데이터를 찾을 수 없습니다');
-        }
-    } catch (error) {
-        console.error('환율 정보 가져오기 실패:', error);
-        console.error('상세 에러:', error.message);
-        const rateElement = document.getElementById('currentRate');
-        if (rateElement) {
-            rateElement.textContent = '환율 정보 없음';
+            console.log('localStorage에도 토큰이 없음');
         }
     }
 }
 
 // 페이지 로드 시 실행
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('페이지 로드됨 - FCM 초기화');
+    console.log('페이지 로드됨 - FCM 초기화 시작');
     await initializeFCM();
+    
+    // FCM 토큰 상태 확인
+    if (messagingToken) {
+        console.log('FCM 토큰 사용 가능:', messagingToken);
+    } else {
+        console.log('FCM 토큰 없음 - 초기화 실패 가능성 있음');
+    }
+    
     await loadData();
     await loadSettings();
     
@@ -894,3 +846,52 @@ document.addEventListener('DOMContentLoaded', () => {
         headerActions.insertBefore(tokenButton, headerActions.firstChild);
     }
 });
+
+// 환율 업데이트 함수
+async function updateCurrentRate() {
+    try {
+        const now = new Date();
+        console.log('환율 업데이트 시작:', now.toLocaleString());
+        
+        // 네이버 환율 API 호출 (JPY-KRW)
+        const response = await fetch('https://m.search.naver.com/p/csearch/content/qapirender.nhn?key=calculator&pkid=141&q=%ED%99%98%EC%9C%A8&where=m&u1=keb&u6=standardUnit&u7=0&u3=JPY&u4=KRW&u8=down&u2=100', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('네이버 환율 데이터:', data);
+        
+        if (data && data.country && data.country[1]) {
+            const rate = parseFloat(data.country[1].value.replace(/,/g, '')).toFixed(2);
+            
+            console.log('=== 환율 정보 ===');
+            console.log('현재 시각:', now.toLocaleString());
+            console.log('100엔:', rate);
+            
+            const rateElement = document.getElementById('currentRate');
+            if (rateElement) {
+                rateElement.textContent = `${rate}원 (${now.toLocaleTimeString()})`;
+                console.log('환율 업데이트 완료');
+            }
+            
+            // 환율 체크 및 알림
+            checkRateAndNotify(parseFloat(rate));
+        } else {
+            throw new Error('환율 데이터를 찾을 수 없습니다');
+        }
+    } catch (error) {
+        console.error('환율 정보 가져오기 실패:', error);
+        console.error('상세 에러:', error.message);
+        const rateElement = document.getElementById('currentRate');
+        if (rateElement) {
+            rateElement.textContent = '환율 정보 없음';
+        }
+    }
+}
