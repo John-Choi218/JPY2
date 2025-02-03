@@ -567,24 +567,30 @@ async function checkNotificationPermission() {
     }
 }
 
-// Service Worker 등록 상태 확인
-async function checkServiceWorker() {
+// Service Worker 등록 함수 수정
+async function registerServiceWorker() {
+    // 현재 URL이 localhost 또는 127.0.0.1인지 확인
+    const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+    
+    // 기본 경로 설정
+    const basePath = isLocal ? '' : '/JPY2';
+    const swPath = `${basePath}/firebase-messaging-sw.js`;
+    const scope = `${basePath}/`;
+    
+    console.log('Service Worker 등록 시도:', { swPath, scope });
+    
     try {
-        const registration = await navigator.serviceWorker.getRegistration();
-        console.log('현재 Service Worker 상태:', registration);
-        
-        // 기존 Service Worker 제거 후 재등록
-        if (registration) {
-            await registration.unregister();
-            console.log('기존 Service Worker 제거됨');
-        }
-        
-        const newRegistration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-        console.log('새로운 Service Worker 등록됨:', newRegistration);
-        
-        return newRegistration;
+        const registration = await navigator.serviceWorker.register(swPath, { scope: scope });
+        console.log('Service Worker 등록 성공:', registration);
+        return registration;
     } catch (error) {
-        console.error('Service Worker 확인/등록 실패:', error);
+        console.error('Service Worker 등록 실패:', error);
+        // 로컬 환경에서 다른 경로 시도
+        if (isLocal) {
+            const altPath = 'firebase-messaging-sw.js';
+            console.log('대체 경로로 재시도:', altPath);
+            return await navigator.serviceWorker.register(altPath);
+        }
         throw error;
     }
 }
@@ -602,26 +608,10 @@ async function initializeFCM() {
             throw new Error('알림 권한이 거부되었습니다.');
         }
         
-        // GitHub Pages 기본 경로 설정
-        const scope = '/JPY2/';  // 수정된 저장소 이름
-        const swPath = '/JPY2/firebase-messaging-sw.js';  // 수정된 저장소 이름
-        
         // Service Worker 등록
         if ('serviceWorker' in navigator) {
-            try {
-                const registration = await navigator.serviceWorker.register(swPath, { scope: scope });
-                console.log('Service Worker 등록 성공:', registration);
-                
-                // Service Worker가 활성화될 때까지 대기
-                await navigator.serviceWorker.ready;
-                console.log('Service Worker 활성화됨');
-            } catch (error) {
-                console.error('Service Worker 등록 실패:', error);
-                // 다른 경로로 재시도
-                const altPath = 'firebase-messaging-sw.js';  // 상대 경로로 시도
-                const registration = await navigator.serviceWorker.register(altPath);
-                console.log('대체 경로로 Service Worker 등록 성공:', registration);
-            }
+            const registration = await registerServiceWorker();
+            console.log('Service Worker 활성화됨:', registration);
         } else {
             throw new Error('이 브라우저는 Service Worker를 지원하지 않습니다.');
         }
