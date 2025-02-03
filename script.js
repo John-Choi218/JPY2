@@ -612,6 +612,11 @@ async function initializeFCM() {
         });
         console.log('FCM 토큰 생성됨:', messagingToken);
         
+        // 토큰을 localStorage에 저장
+        if (messagingToken) {
+            localStorage.setItem('fcmToken', messagingToken);
+        }
+        
         // 토큰 변경 감지
         messaging.onTokenRefresh = async () => {
             try {
@@ -647,6 +652,9 @@ async function initializeFCM() {
     } catch (error) {
         console.error('FCM 초기화 실패:', error);
         console.error('상세 에러:', error.message);
+        
+        // localStorage에서 토큰 복구 시도
+        messagingToken = localStorage.getItem('fcmToken');
     }
 }
 
@@ -847,7 +855,13 @@ function showFCMToken() {
         cancelButtonText: '닫기'
     }).then((result) => {
         if (result.isConfirmed) {
-            navigator.clipboard.writeText(messagingToken).then(() => {
+            // 모바일에서도 작동하는 복사 기능
+            const textarea = document.createElement('textarea');
+            textarea.value = messagingToken;
+            document.body.appendChild(textarea);
+            textarea.select();
+            try {
+                document.execCommand('copy');
                 Swal.fire({
                     icon: 'success',
                     title: '복사 완료',
@@ -855,14 +869,15 @@ function showFCMToken() {
                     timer: 1500,
                     showConfirmButton: false
                 });
-            }).catch(err => {
+            } catch (err) {
                 console.error('토큰 복사 실패:', err);
                 Swal.fire({
                     icon: 'error',
                     title: '복사 실패',
                     text: '토큰을 수동으로 복사해주세요.'
                 });
-            });
+            }
+            document.body.removeChild(textarea);
         }
     });
 }
