@@ -752,6 +752,171 @@ navigator.serviceWorker.getRegistrations().then(function(registrations) {
     }
 });
 
+// 알림 전송 기본 함수
+async function sendNotification(title, body, data = {}) {
+    try {
+        console.log('알림 전송 시작:', { title, body, data });
+        
+        if (!messagingToken) {
+            console.error('FCM 토큰 없음!');
+            throw new Error('FCM 토큰이 없습니다. 알림 설정을 다시 해주세요.');
+        }
+        
+        // 서비스 워커 상태 확인
+        const registration = await navigator.serviceWorker.getRegistration();
+        console.log('현재 Service Worker 상태:', registration);
+        
+        // Firestore에 알림 요청 저장
+        const notificationRef = await db.collection('notifications').add({
+            token: messagingToken,
+            title: title,
+            body: body,
+            data: data,
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            type: data.type || 'general'
+        });
+        
+        console.log('알림 요청 Firestore에 저장됨:', notificationRef.id);
+        
+        // 로컬 알림 즉시 표시
+        if (registration) {
+            console.log('로컬 알림 표시 시도...');
+            await registration.showNotification(title, {
+                body: body,
+                icon: '/icon.png',
+                vibrate: [200, 100, 200],
+                tag: data.type || 'notification',
+                data: data
+            });
+            console.log('로컬 알림 표시 완료');
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('알림 전송 실패:', error);
+        throw error;
+    }
+}
+
+// 목표가 달성되었을 때 알림
+async function sendTargetReachedNotification(rate, targetRate, type) {
+    try {
+        const title = '목표 환율 달성!';
+        const body = `현재 환율(${rate}원)이 ${type === 'upper' ? '상향' : '하향'} 목표치(${targetRate}원)에 도달했습니다.`;
+        
+        await sendNotification(title, body, {
+            type: 'target_reached',
+            rate: rate,
+            targetRate: targetRate,
+            targetType: type
+        });
+        
+        Swal.fire({
+            icon: 'success',
+            title: '알림 전송 완료',
+            text: '목표 달성 알림이 전송되었습니다.'
+        });
+    } catch (error) {
+        console.error('목표 달성 알림 실패:', error);
+        Swal.fire({
+            icon: 'error',
+            title: '알림 전송 실패',
+            text: `오류: ${error.message}`
+        });
+    }
+}
+
+// 투자 완료 알림
+async function sendInvestmentCompletedNotification(investmentId, amount) {
+    try {
+        const title = '투자 완료';
+        const body = `${amount}엔 투자가 완료되었습니다.`;
+        
+        await sendNotification(title, body, {
+            type: 'investment_completed',
+            investmentId: investmentId,
+            amount: amount
+        });
+        
+        console.log('투자 완료 알림 전송됨');
+    } catch (error) {
+        console.error('투자 완료 알림 실패:', error);
+    }
+}
+
+// 환율 변동 알림
+async function sendExchangeRateChangeNotification(newRate, oldRate) {
+    try {
+        const difference = (newRate - oldRate).toFixed(2);
+        const direction = difference > 0 ? '상승' : '하락';
+        
+        const title = '환율 변동 알림';
+        const body = `환율이 ${Math.abs(difference)}원 ${direction}했습니다. (현재: ${newRate}원)`;
+        
+        await sendNotification(title, body, {
+            type: 'rate_change',
+            newRate: newRate,
+            oldRate: oldRate,
+            difference: difference
+        });
+        
+        console.log('환율 변동 알림 전송됨');
+    } catch (error) {
+        console.error('환율 변동 알림 실패:', error);
+    }
+}
+
+// 테스트 알림
+async function sendTestNotification() {
+    try {
+        const title = '테스트 알림';
+        const body = `테스트 알림입니다. (${new Date().toLocaleString()})`;
+        
+        await sendNotification(title, body, {
+            type: 'test',
+            timestamp: new Date().toISOString()
+        });
+        
+        Swal.fire({
+            icon: 'success',
+            title: '알림 전송 완료',
+            text: '테스트 알림이 전송되었습니다.'
+        });
+    } catch (error) {
+        console.error('테스트 알림 실패:', error);
+        Swal.fire({
+            icon: 'error',
+            title: '알림 전송 실패',
+            text: `오류: ${error.message}`
+        });
+    }
+}
+
+// 포그라운드 메시지 핸들러 설정
+function setupMessageHandler() {
+    const messaging = firebase.messaging();
+    messaging.onMessage(async (payload) => {
+        console.log('포그라운드 메시지 수신:', payload);
+        
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+            await registration.showNotification(payload.notification.title, {
+                body: payload.notification.body,
+                icon: '/icon.png',
+                vibrate: [200, 100, 200],
+                tag: payload.data?.type || 'fcm-notification',
+                data: payload.data
+            });
+        }
+    });
+}
+
+// 페이지 로드 시 메시지 핸들러 설정
+document.addEventListener('DOMContentLoaded', () => {
+    setupMessageHandler();
+    // ... 기존 코드 ...
+});
+
 // 환율 체크 및 알림 함수
 async function checkRateAndNotify(currentRate) {
     if (!messagingToken) return;
