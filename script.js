@@ -685,22 +685,43 @@ async function checkRateAndNotify(currentRate) {
     if (!messagingToken) return;
     
     currentInvestments.forEach(async (inv) => {
-        const buyTarget = inv.exchangeRate - settings.buyThreshold;
-        const sellTarget = inv.exchangeRate + settings.sellThreshold;
+        // 각 투자 내역의 매수/매도 목표가 계산
+        const buyTarget = inv.exchangeRate - settings.buyThreshold;  // 매수 목표가
+        const sellTarget = inv.exchangeRate + settings.sellThreshold;  // 매도 목표가
         
-        if (currentRate <= buyTarget || currentRate >= sellTarget) {
+        console.log('=== 환율 체크 ===');
+        console.log('투자 ID:', inv.id);
+        console.log('매수 목표가:', buyTarget.toFixed(2));
+        console.log('매도 목표가:', sellTarget.toFixed(2));
+        console.log('현재 환율:', currentRate);
+        
+        // 매수 알림 (현재 환율이 매수 목표가보다 1원 이상 낮을 때)
+        if (currentRate <= (buyTarget - 1)) {
             try {
-                // Firestore에 알림 메시지 저장
                 await db.collection('notifications').add({
                     token: messagingToken,
-                    title: currentRate <= buyTarget ? '매수 기회!' : '매도 기회!',
-                    body: currentRate <= buyTarget 
-                        ? `${new Date(inv.date).toLocaleDateString()} 매수건의 매수 목표가(${buyTarget.toFixed(2)}원)에 도달했습니다. 현재 환율: ${currentRate}원`
-                        : `${new Date(inv.date).toLocaleDateString()} 매수건의 매도 목표가(${sellTarget.toFixed(2)}원)에 도달했습니다. 현재 환율: ${currentRate}원`,
+                    title: '매수 기회!',
+                    body: `${new Date(inv.date).toLocaleDateString()} 매수건의 매수 목표가(${buyTarget.toFixed(2)}원)보다 ${(buyTarget - currentRate).toFixed(2)}원 낮습니다.\n현재 환율: ${currentRate}원`,
                     timestamp: firebase.firestore.FieldValue.serverTimestamp()
                 });
+                console.log('매수 알림 전송됨');
             } catch (error) {
-                console.error('알림 저장 실패:', error);
+                console.error('매수 알림 저장 실패:', error);
+            }
+        }
+        
+        // 매도 알림 (현재 환율이 매도 목표가보다 1원 이상 높을 때)
+        if (currentRate >= (sellTarget + 1)) {
+            try {
+                await db.collection('notifications').add({
+                    token: messagingToken,
+                    title: '매도 기회!',
+                    body: `${new Date(inv.date).toLocaleDateString()} 매수건의 매도 목표가(${sellTarget.toFixed(2)}원)보다 ${(currentRate - sellTarget).toFixed(2)}원 높습니다.\n현재 환율: ${currentRate}원`,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                console.log('매도 알림 전송됨');
+            } catch (error) {
+                console.error('매도 알림 저장 실패:', error);
             }
         }
     });
