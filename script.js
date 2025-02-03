@@ -602,14 +602,26 @@ async function initializeFCM() {
             throw new Error('알림 권한이 거부되었습니다.');
         }
         
+        // GitHub Pages 기본 경로 설정
+        const scope = '/JPY2/';  // 수정된 저장소 이름
+        const swPath = '/JPY2/firebase-messaging-sw.js';  // 수정된 저장소 이름
+        
         // Service Worker 등록
         if ('serviceWorker' in navigator) {
-            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
-            console.log('Service Worker 등록 성공:', registration);
-            
-            // Service Worker가 활성화될 때까지 대기
-            await navigator.serviceWorker.ready;
-            console.log('Service Worker 활성화됨');
+            try {
+                const registration = await navigator.serviceWorker.register(swPath, { scope: scope });
+                console.log('Service Worker 등록 성공:', registration);
+                
+                // Service Worker가 활성화될 때까지 대기
+                await navigator.serviceWorker.ready;
+                console.log('Service Worker 활성화됨');
+            } catch (error) {
+                console.error('Service Worker 등록 실패:', error);
+                // 다른 경로로 재시도
+                const altPath = 'firebase-messaging-sw.js';  // 상대 경로로 시도
+                const registration = await navigator.serviceWorker.register(altPath);
+                console.log('대체 경로로 Service Worker 등록 성공:', registration);
+            }
         } else {
             throw new Error('이 브라우저는 Service Worker를 지원하지 않습니다.');
         }
