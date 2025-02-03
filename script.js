@@ -601,25 +601,67 @@ function checkRateAndNotify(currentRate) {
 // 환율 업데이트 함수 수정
 async function updateCurrentRate() {
     try {
-        const response = await fetch('https://api.exchangerate-api.com/v4/latest/JPY');
-        const data = await response.json();
-        const rate = (data.rates.KRW * 100).toFixed(2);
-        const currentRate = parseFloat(rate);
-        document.getElementById('currentRate').textContent = rate + '원';
-        console.log('환율 업데이트 완료:', new Date().toLocaleString());
+        const now = new Date();
+        console.log('환율 업데이트 시작:', now.toLocaleString());
         
-        // 환율 체크 및 알림
-        checkRateAndNotify(currentRate);
+        // 네이버 환율 API 호출 (JPY-KRW)
+        const response = await fetch('https://m.search.naver.com/p/csearch/content/qapirender.nhn?key=calculator&pkid=141&q=%ED%99%98%EC%9C%A8&where=m&u1=keb&u6=standardUnit&u7=0&u3=JPY&u4=KRW&u8=down&u2=100', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        console.log('네이버 환율 데이터:', data);
+        
+        if (data && data.country && data.country[1]) {
+            const rate = parseFloat(data.country[1].value.replace(/,/g, '')).toFixed(2);
+            
+            console.log('=== 환율 정보 ===');
+            console.log('현재 시각:', now.toLocaleString());
+            console.log('100엔:', rate);
+            
+            const rateElement = document.getElementById('currentRate');
+            if (rateElement) {
+                rateElement.textContent = `${rate}원 (${now.toLocaleTimeString()})`;
+                console.log('환율 업데이트 완료');
+            }
+            
+            // 환율 체크 및 알림
+            checkRateAndNotify(parseFloat(rate));
+        } else {
+            throw new Error('환율 데이터를 찾을 수 없습니다');
+        }
     } catch (error) {
         console.error('환율 정보 가져오기 실패:', error);
-        document.getElementById('currentRate').textContent = '환율 정보 없음';
+        console.error('상세 에러:', error.message);
+        const rateElement = document.getElementById('currentRate');
+        if (rateElement) {
+            rateElement.textContent = '환율 정보 없음';
+        }
     }
 }
 
-// 페이지 로드 시 알림 권한 요청 및 환율 업데이트
+// 페이지 로드 시 실행
 document.addEventListener('DOMContentLoaded', async () => {
+    console.log('페이지 로드됨 - 네이버 환율 초기화');
     await requestNotificationPermission();
-    updateCurrentRate();
+    
+    // 초기 환율 업데이트
+    await updateCurrentRate();
+    
     // 1분마다 환율 업데이트
     setInterval(updateCurrentRate, 60000);
+});
+
+// 브라우저 콘솔에서 실행
+navigator.serviceWorker.getRegistrations().then(function(registrations) {
+    for(let registration of registrations) {
+        registration.unregister();
+    }
 });
