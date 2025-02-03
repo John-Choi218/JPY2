@@ -1070,3 +1070,195 @@ function startExchangeRateUpdates() {
 document.addEventListener('DOMContentLoaded', () => {
     startExchangeRateUpdates();
 });
+
+// 콘솔 로그 UI 생성 및 관리
+class ConsoleUI {
+    constructor() {
+        this.logs = [];
+        this.maxLogs = 50; // 최대 로그 수
+        this.createUI();
+        this.interceptConsole();
+    }
+
+    createUI() {
+        // 콘솔 컨테이너 생성
+        const container = document.createElement('div');
+        container.id = 'console-container';
+        container.style.cssText = `
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 200px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            font-family: monospace;
+            font-size: 12px;
+            overflow-y: auto;
+            z-index: 9999;
+            padding: 10px;
+            display: none;
+        `;
+
+        // 헤더 생성
+        const header = document.createElement('div');
+        header.style.cssText = `
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 5px;
+        `;
+
+        // 제목
+        const title = document.createElement('span');
+        title.textContent = 'Console Logs';
+        
+        // 버튼 컨테이너
+        const buttons = document.createElement('div');
+        
+        // 클리어 버튼
+        const clearBtn = document.createElement('button');
+        clearBtn.textContent = 'Clear';
+        clearBtn.style.cssText = `
+            background: #444;
+            color: #fff;
+            border: none;
+            padding: 2px 8px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 11px;
+        `;
+        clearBtn.onclick = () => this.clearLogs();
+
+        // 닫기 버튼
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = 'Close';
+        closeBtn.style.cssText = clearBtn.style.cssText;
+        closeBtn.onclick = () => this.toggleConsole(false);
+
+        buttons.appendChild(clearBtn);
+        buttons.appendChild(closeBtn);
+        header.appendChild(title);
+        header.appendChild(buttons);
+
+        // 로그 컨테이너
+        const logContainer = document.createElement('div');
+        logContainer.id = 'console-logs';
+        logContainer.style.cssText = `
+            overflow-y: auto;
+            max-height: 170px;
+        `;
+
+        container.appendChild(header);
+        container.appendChild(logContainer);
+        document.body.appendChild(container);
+
+        // 토글 버튼 생성
+        const toggleBtn = document.createElement('button');
+        toggleBtn.textContent = 'Show Console';
+        toggleBtn.style.cssText = `
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            background: #444;
+            color: #fff;
+            border: none;
+            padding: 5px 10px;
+            cursor: pointer;
+            z-index: 10000;
+            font-size: 12px;
+        `;
+        toggleBtn.onclick = () => this.toggleConsole();
+        document.body.appendChild(toggleBtn);
+    }
+
+    interceptConsole() {
+        const originalConsole = {
+            log: console.log,
+            error: console.error,
+            warn: console.warn,
+            info: console.info
+        };
+
+        const self = this;
+        
+        // 콘솔 메소드 가로채기
+        ['log', 'error', 'warn', 'info'].forEach(method => {
+            console[method] = function() {
+                originalConsole[method].apply(console, arguments);
+                self.addLog(method, Array.from(arguments));
+            };
+        });
+    }
+
+    addLog(type, args) {
+        const logElement = document.createElement('div');
+        logElement.style.cssText = `
+            padding: 2px 0;
+            border-bottom: 1px solid #333;
+            word-break: break-all;
+        `;
+
+        // 타임스탬프 추가
+        const time = new Date().toLocaleTimeString();
+        const timeSpan = document.createElement('span');
+        timeSpan.style.color = '#888';
+        timeSpan.textContent = `[${time}] `;
+        logElement.appendChild(timeSpan);
+
+        // 로그 타입에 따른 스타일
+        const typeColors = {
+            error: '#ff4444',
+            warn: '#ffaa00',
+            info: '#44aaff',
+            log: '#fff'
+        };
+
+        logElement.style.color = typeColors[type];
+
+        // 로그 내용 추가
+        const content = args.map(arg => {
+            if (typeof arg === 'object') {
+                return JSON.stringify(arg);
+            }
+            return String(arg);
+        }).join(' ');
+        
+        logElement.appendChild(document.createTextNode(content));
+
+        const logContainer = document.getElementById('console-logs');
+        if (logContainer) {
+            logContainer.appendChild(logElement);
+            logContainer.scrollTop = logContainer.scrollHeight;
+
+            // 최대 로그 수 제한
+            while (logContainer.children.length > this.maxLogs) {
+                logContainer.removeChild(logContainer.firstChild);
+            }
+        }
+    }
+
+    clearLogs() {
+        const logContainer = document.getElementById('console-logs');
+        if (logContainer) {
+            logContainer.innerHTML = '';
+        }
+    }
+
+    toggleConsole(show) {
+        const container = document.getElementById('console-container');
+        if (container) {
+            if (show === undefined) {
+                show = container.style.display === 'none';
+            }
+            container.style.display = show ? 'block' : 'none';
+        }
+    }
+}
+
+// 페이지 로드 시 콘솔 UI 초기화
+document.addEventListener('DOMContentLoaded', () => {
+    window.consoleUI = new ConsoleUI();
+    // ... 기존 코드 ...
+});
