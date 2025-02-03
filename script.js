@@ -1227,6 +1227,7 @@ async function fetchExchangeRate() {
             
             // 목표 환율 확인 및 알림
             await checkTargetRates(newRate);
+            await checkInvestmentAlerts(newRate);
             
             return parseFloat(newRate);
         } else {
@@ -1285,6 +1286,50 @@ async function checkTargetRates(currentRate) {
         
     } catch (error) {
         console.error('목표 환율 확인 중 오류:', error);
+    }
+}
+
+// 투자 알림 체크 함수
+async function checkInvestmentAlerts(currentRate) {
+    try {
+        currentInvestments.forEach(async (inv) => {
+            const buyTarget = inv.exchangeRate - settings.buyThreshold;  // 매수 목표가
+            const sellTarget = inv.exchangeRate + settings.sellThreshold;  // 매도 목표가
+            
+            console.log('=== 투자 알림 체크 ===');
+            console.log('투자 ID:', inv.id);
+            console.log('매수 목표가:', buyTarget.toFixed(2));
+            console.log('매도 목표가:', sellTarget.toFixed(2));
+            console.log('현재 환율:', currentRate);
+            
+            // 매수 알림 (현재 환율이 매수 목표가보다 1원 이상 낮을 때)
+            if (currentRate <= (buyTarget - 1)) {
+                await sendNotification(
+                    '매수 기회!',
+                    `${new Date(inv.date).toLocaleDateString()} 매수건의 매수 목표가(${buyTarget.toFixed(2)}원)보다 ${(buyTarget - currentRate).toFixed(2)}원 낮습니다.\n현재 환율: ${currentRate}원`,
+                    {
+                        type: 'buy_opportunity',
+                        investmentId: inv.id
+                    }
+                );
+                console.log('매수 알림 전송됨');
+            }
+            
+            // 매도 알림 (현재 환율이 매도 목표가보다 1원 이상 높을 때)
+            if (currentRate >= (sellTarget + 1)) {
+                await sendNotification(
+                    '매도 기회!',
+                    `${new Date(inv.date).toLocaleDateString()} 매수건의 매도 목표가(${sellTarget.toFixed(2)}원)보다 ${(currentRate - sellTarget).toFixed(2)}원 높습니다.\n현재 환율: ${currentRate}원`,
+                    {
+                        type: 'sell_opportunity',
+                        investmentId: inv.id
+                    }
+                );
+                console.log('매도 알림 전송됨');
+            }
+        });
+    } catch (error) {
+        console.error('투자 알림 체크 중 오류:', error);
     }
 }
 
