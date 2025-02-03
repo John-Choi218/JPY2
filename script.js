@@ -819,3 +819,63 @@ document.addEventListener('DOMContentLoaded', () => {
         headerActions.insertBefore(testButton, headerActions.firstChild);
     }
 });
+
+// FCM 토큰 표시 함수
+function showFCMToken() {
+    if (!messagingToken) {
+        Swal.fire({
+            icon: 'error',
+            title: 'FCM 토큰 없음',
+            text: 'FCM 토큰이 아직 생성되지 않았습니다. 페이지를 새로고침 해보세요.',
+            confirmButtonText: '확인'
+        });
+        return;
+    }
+
+    Swal.fire({
+        title: 'FCM 토큰',
+        html: `
+            <div style="word-break: break-all; margin-bottom: 10px;">
+                ${messagingToken}
+            </div>
+            <div style="font-size: 12px; color: #666;">
+                * 이 토큰은 이 기기에서 푸시 알림을 받기 위한 고유 식별자입니다.
+            </div>
+        `,
+        confirmButtonText: '복사',
+        showCancelButton: true,
+        cancelButtonText: '닫기'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            navigator.clipboard.writeText(messagingToken).then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: '복사 완료',
+                    text: '토큰이 클립보드에 복사되었습니다.',
+                    timer: 1500,
+                    showConfirmButton: false
+                });
+            }).catch(err => {
+                console.error('토큰 복사 실패:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: '복사 실패',
+                    text: '토큰을 수동으로 복사해주세요.'
+                });
+            });
+        }
+    });
+}
+
+// 헤더에 FCM 토큰 확인 버튼 추가
+document.addEventListener('DOMContentLoaded', () => {
+    const headerActions = document.querySelector('.header-actions');
+    if (headerActions) {
+        const tokenButton = document.createElement('button');
+        tokenButton.textContent = 'FCM 토큰';
+        tokenButton.className = 'settings-button';
+        tokenButton.style.marginRight = '10px';
+        tokenButton.onclick = showFCMToken;
+        headerActions.insertBefore(tokenButton, headerActions.firstChild);
+    }
+});
