@@ -1225,8 +1225,8 @@ async function fetchExchangeRate() {
             // 현재 환율 저장
             localStorage.setItem('lastRate', newRate);
             
-            // 목표 환율 확인
-            checkTargetRates(newRate);
+            // 목표 환율 확인 및 알림
+            await checkTargetRates(newRate);
             
             return parseFloat(newRate);
         } else {
@@ -1263,7 +1263,7 @@ async function checkTargetRates(currentRate) {
                             targetRate: target.rate
                         }
                     );
-                    target.notified = true;
+                    target.notified = true; // 알림 상태 업데이트
                 } else if (target.type === 'lower' && currentRate <= target.rate) {
                     await sendNotification(
                         '하향 목표 환율 도달!',
@@ -1275,7 +1275,7 @@ async function checkTargetRates(currentRate) {
                             targetRate: target.rate
                         }
                     );
-                    target.notified = true;
+                    target.notified = true; // 알림 상태 업데이트
                 }
             }
         }
