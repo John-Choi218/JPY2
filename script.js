@@ -807,7 +807,7 @@ async function sendTestNotification() {
             Swal.fire({
                 icon: 'error',
                 title: '알림 전송 실패',
-                text: 'FCM 토큰이 없습니다. 페이지를 새로고침하고 다시 시도해주세요.'
+                text: 'FCM 토큰이 없습니다. 알림 설정을 다시 해주세요.'
             });
             return;
         }
@@ -815,14 +815,45 @@ async function sendTestNotification() {
         console.log('테스트 알림 전송 시도...');
         console.log('사용할 FCM 토큰:', messagingToken);
         
+        // 포그라운드 메시지 테스트
+        const messaging = firebase.messaging();
+        messaging.onMessage((payload) => {
+            console.log('포그라운드 메시지 수신:', payload);
+            
+            // 알림 표시
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                const options = {
+                    body: payload.notification.body,
+                    icon: '/icon.png',  // 알림 아이콘 (선택사항)
+                    vibrate: [200, 100, 200]
+                };
+                
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.showNotification(payload.notification.title, options);
+                });
+            }
+        });
+        
+        // Firestore에 알림 요청 저장
         await db.collection('notifications').add({
             token: messagingToken,
             title: '테스트 알림',
             body: '이것은 테스트 알림입니다. ' + new Date().toLocaleString(),
-            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            timestamp: firebase.firestore.FieldValue.serverTimestamp(),
+            type: 'test'  // 알림 타입 추가
         });
         
         console.log('테스트 알림 요청 완료');
+        
+        // 즉시 로컬 알림 표시
+        if ('serviceWorker' in navigator && 'PushManager' in window) {
+            const registration = await navigator.serviceWorker.ready;
+            await registration.showNotification('테스트 알림', {
+                body: '이것은 로컬 테스트 알림입니다. ' + new Date().toLocaleString(),
+                icon: '/icon.png',
+                vibrate: [200, 100, 200]
+            });
+        }
         
         Swal.fire({
             icon: 'success',
@@ -831,6 +862,7 @@ async function sendTestNotification() {
         });
     } catch (error) {
         console.error('테스트 알림 실패:', error);
+        console.error('상세 에러:', error.message);
         Swal.fire({
             icon: 'error',
             title: '알림 전송 실패',
