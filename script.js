@@ -555,6 +555,19 @@ async function deleteCompletedInvestment(id) {
 // FCM 초기화 및 토큰 관리
 let messagingToken = null;
 
+// 알림 권한 상태 체크 함수
+async function checkNotificationPermission() {
+    const permission = await Notification.requestPermission();
+    console.log('현재 알림 권한 상태:', permission);
+    
+    // Android Chrome 알림 설정 확인
+    if ('permissions' in navigator) {
+        const result = await navigator.permissions.query({ name: 'notifications' });
+        console.log('Chrome 알림 권한:', result.state);
+    }
+}
+
+// FCM 초기화 함수 수정
 async function initializeFCM() {
     try {
         // Service Worker 등록
@@ -567,18 +580,15 @@ async function initializeFCM() {
 
         const messaging = firebase.messaging();
         
-        // 알림 권한 요청
-        const permission = await Notification.requestPermission();
-        if (permission !== 'granted') {
-            throw new Error('알림 권한이 거부되었습니다.');
-        }
+        // 알림 권한 상태 체크
+        await checkNotificationPermission();
         
         // FCM 토큰 가져오기
         messagingToken = await messaging.getToken({
             vapidKey: 'BL1Pu4t4Hrwq_qOAkM3QA4g5AjDyRZISVVWaf30VW0MEfPOyxYTfpiFj4tP1AhlPaAvaQtJvWyOXg-JFC4CxeVo',
             serviceWorkerRegistration: await navigator.serviceWorker.getRegistration()
         });
-        console.log('FCM 토큰:', messagingToken);
+        console.log('FCM 토큰 생성됨:', messagingToken);
         
         // 토큰 변경 감지
         messaging.onTokenRefresh = async () => {
@@ -587,7 +597,7 @@ async function initializeFCM() {
                     vapidKey: 'BL1Pu4t4Hrwq_qOAkM3QA4g5AjDyRZISVVWaf30VW0MEfPOyxYTfpiFj4tP1AhlPaAvaQtJvWyOXg-JFC4CxeVo',
                     serviceWorkerRegistration: await navigator.serviceWorker.getRegistration()
                 });
-                console.log('FCM 토큰 갱신:', messagingToken);
+                console.log('FCM 토큰 갱신됨:', messagingToken);
             } catch (error) {
                 console.error('토큰 갱신 실패:', error);
             }
@@ -597,16 +607,24 @@ async function initializeFCM() {
         messaging.onMessage((payload) => {
             console.log('포그라운드 메시지 수신:', payload);
             
-            const notification = new Notification(payload.notification.title, {
-                body: payload.notification.body,
-                icon: '/images/icon-192.png',
-                badge: '/images/badge-72.png',
-                vibrate: [200, 100, 200]
-            });
+            // 알림 표시
+            if ('serviceWorker' in navigator && 'PushManager' in window) {
+                const options = {
+                    body: payload.notification.body,
+                    icon: '/images/icon-192.png',
+                    badge: '/images/badge-72.png',
+                    vibrate: [200, 100, 200]
+                };
+                
+                navigator.serviceWorker.ready.then(registration => {
+                    registration.showNotification(payload.notification.title, options);
+                });
+            }
         });
         
     } catch (error) {
         console.error('FCM 초기화 실패:', error);
+        console.error('상세 에러:', error.message);
     }
 }
 
@@ -726,3 +744,31 @@ async function checkRateAndNotify(currentRate) {
         }
     });
 }
+
+// 테스트 알림 함수
+async function sendTestNotification() {
+    try {
+        await db.collection('notifications').add({
+            token: messagingToken,
+            title: '테스트 알림',
+            body: '이것은 테스트 알림입니다. ' + new Date().toLocaleString(),
+            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        console.log('테스트 알림 요청 완료');
+    } catch (error) {
+        console.error('테스트 알림 실패:', error);
+    }
+}
+
+// 테스트 버튼 추가
+document.addEventListener('DOMContentLoaded', () => {
+    const headerActions = document.querySelector('.header-actions');
+    if (headerActions) {
+        const testButton = document.createElement('button');
+        testButton.textContent = '알림 테스트';
+        testButton.className = 'settings-button';
+        testButton.style.marginRight = '10px';
+        testButton.onclick = sendTestNotification;
+        headerActions.insertBefore(testButton, headerActions.firstChild);
+    }
+});
