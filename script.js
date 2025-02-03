@@ -1480,3 +1480,12 @@ document.addEventListener('DOMContentLoaded', () => {
     window.consoleUI = new ConsoleUI();
     // ... 기존 코드 ...
 });
+
+document.addEventListener('DOMContentLoaded', function () {
+    const darkModeToggle = document.getElementById('darkModeToggle');
+    if (darkModeToggle) {
+        darkModeToggle.addEventListener('click', function () {
+            document.body.classList.toggle('dark-mode');
+        });
+    }
+});
