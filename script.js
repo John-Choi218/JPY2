@@ -552,53 +552,65 @@ async function deleteCompletedInvestment(id) {
     }
 }
 
-// 푸시 알림 권한 요청
-async function requestNotificationPermission() {
-    if (!("Notification" in window)) {
-        console.log("이 브라우저는 알림을 지원하지 않습니다.");
-        return;
-    }
-    
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-        console.log('알림 권한이 거부되었습니다.');
-    }
-}
+// FCM 초기화 및 토큰 관리
+let messagingToken = null;
 
-// 알림 보내기 함수
-function sendNotification(title, message) {
-    if (Notification.permission === 'granted') {
-        new Notification(title, {
-            body: message,
-            icon: 'images/icon-192.png'
-        });
-    }
-}
+async function initializeFCM() {
+    try {
+        // Service Worker 등록
+        if ('serviceWorker' in navigator) {
+            const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js');
+            console.log('Service Worker 등록 성공:', registration);
+        } else {
+            throw new Error('이 브라우저는 Service Worker를 지원하지 않습니다.');
+        }
 
-// 환율 체크 및 알림 함수
-function checkRateAndNotify(currentRate) {
-    currentInvestments.forEach(inv => {
-        // 매수 목표가 체크 (테이블에 표시된 매수 목표가 기준)
-        const buyTarget = inv.exchangeRate - settings.buyThreshold;
-        if (currentRate <= buyTarget) {
-            sendNotification(
-                '매수 기회!', 
-                `${new Date(inv.date).toLocaleDateString()} 매수건의 매수 목표가(${buyTarget.toFixed(2)}원)에 도달했습니다. 현재 환율: ${currentRate}원`
-            );
+        const messaging = firebase.messaging();
+        
+        // 알림 권한 요청
+        const permission = await Notification.requestPermission();
+        if (permission !== 'granted') {
+            throw new Error('알림 권한이 거부되었습니다.');
         }
         
-        // 매도 목표가 체크 (테이블에 표시된 매도 목표가 기준)
-        const sellTarget = inv.exchangeRate + settings.sellThreshold;
-        if (currentRate >= sellTarget) {
-            sendNotification(
-                '매도 기회!', 
-                `${new Date(inv.date).toLocaleDateString()} 매수건의 매도 목표가(${sellTarget.toFixed(2)}원)에 도달했습니다. 현재 환율: ${currentRate}원`
-            );
-        }
-    });
+        // FCM 토큰 가져오기
+        messagingToken = await messaging.getToken({
+            vapidKey: 'BL1Pu4t4Hrwq_qOAkM3QA4g5AjDyRZISVVWaf30VW0MEfPOyxYTfpiFj4tP1AhlPaAvaQtJvWyOXg-JFC4CxeVo',
+            serviceWorkerRegistration: await navigator.serviceWorker.getRegistration()
+        });
+        console.log('FCM 토큰:', messagingToken);
+        
+        // 토큰 변경 감지
+        messaging.onTokenRefresh = async () => {
+            try {
+                messagingToken = await messaging.getToken({
+                    vapidKey: 'BL1Pu4t4Hrwq_qOAkM3QA4g5AjDyRZISVVWaf30VW0MEfPOyxYTfpiFj4tP1AhlPaAvaQtJvWyOXg-JFC4CxeVo',
+                    serviceWorkerRegistration: await navigator.serviceWorker.getRegistration()
+                });
+                console.log('FCM 토큰 갱신:', messagingToken);
+            } catch (error) {
+                console.error('토큰 갱신 실패:', error);
+            }
+        };
+        
+        // 포그라운드 메시지 처리
+        messaging.onMessage((payload) => {
+            console.log('포그라운드 메시지 수신:', payload);
+            
+            const notification = new Notification(payload.notification.title, {
+                body: payload.notification.body,
+                icon: '/images/icon-192.png',
+                badge: '/images/badge-72.png',
+                vibrate: [200, 100, 200]
+            });
+        });
+        
+    } catch (error) {
+        console.error('FCM 초기화 실패:', error);
+    }
 }
 
-// 환율 업데이트 함수 수정
+// 환율 업데이트 함수
 async function updateCurrentRate() {
     try {
         const now = new Date();
@@ -649,8 +661,10 @@ async function updateCurrentRate() {
 
 // 페이지 로드 시 실행
 document.addEventListener('DOMContentLoaded', async () => {
-    console.log('페이지 로드됨 - 네이버 환율 초기화');
-    await requestNotificationPermission();
+    console.log('페이지 로드됨 - FCM 초기화');
+    await initializeFCM();
+    await loadData();
+    await loadSettings();
     
     // 초기 환율 업데이트
     await updateCurrentRate();
@@ -665,3 +679,29 @@ navigator.serviceWorker.getRegistrations().then(function(registrations) {
         registration.unregister();
     }
 });
+
+// 환율 체크 및 알림 함수
+async function checkRateAndNotify(currentRate) {
+    if (!messagingToken) return;
+    
+    currentInvestments.forEach(async (inv) => {
+        const buyTarget = inv.exchangeRate - settings.buyThreshold;
+        const sellTarget = inv.exchangeRate + settings.sellThreshold;
+        
+        if (currentRate <= buyTarget || currentRate >= sellTarget) {
+            try {
+                // Firestore에 알림 메시지 저장
+                await db.collection('notifications').add({
+                    token: messagingToken,
+                    title: currentRate <= buyTarget ? '매수 기회!' : '매도 기회!',
+                    body: currentRate <= buyTarget 
+                        ? `${new Date(inv.date).toLocaleDateString()} 매수건의 매수 목표가(${buyTarget.toFixed(2)}원)에 도달했습니다. 현재 환율: ${currentRate}원`
+                        : `${new Date(inv.date).toLocaleDateString()} 매수건의 매도 목표가(${sellTarget.toFixed(2)}원)에 도달했습니다. 현재 환율: ${currentRate}원`,
+                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            } catch (error) {
+                console.error('알림 저장 실패:', error);
+            }
+        }
+    });
+}
