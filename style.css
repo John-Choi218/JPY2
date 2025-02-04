@@ -342,6 +342,15 @@ body.dark-mode td {
 body.dark-mode .card {
     background-color: #1e1e1e;
     box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+    color: #ffffff; /* 카드 전체의 텍스트 색상 변경 */
+}
+
+body.dark-mode .card h3 {
+    color: #ffffff; /* 카드 내부의 제목 텍스트 색상 변경 */
+}
+
+body.dark-mode .card p {
+    color: #ffffff; /* 카드 내부의 내용 텍스트 색상 변경 */
 }
 
 body.dark-mode .settings-button {
@@ -369,7 +378,7 @@ body.dark-mode .settings-button:hover {
     background-color: #f0f0f0;
 }
 
-.header.dark-mode .header {
+body.dark-mode .header {
     background-color: #1f1f1f;
 }
 
@@ -415,36 +424,36 @@ body.dark-mode .settings-button:hover {
 
 /* 예시: 각 항목 내용 부분 (기본 모드) */
 .content-item {
-  background-color: #ffffff; /* 기본 흰색 배경 */
-  color: #000000;
-  padding: 15px;
-  margin: 10px 0;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    background-color: #ffffff; /* 기본 흰색 배경 */
+    color: #000000;
+    padding: 15px;
+    margin: 10px 0;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 /* 다크 모드일 때, 각 항목 내용 부분의 스타일 변경 */
 body.dark-mode .content-item {
-  background-color: #2c2c2c; /* 다크 모드에 어울리는 어두운 배경색 */
-  color: #ffffff;
-  border-color: #444;
+    background-color: #2c2c2c; /* 다크 모드에 어울리는 어두운 배경색 */
+    color: #ffffff; /* 텍스트 색상 흰색으로 변경 */
+    border-color: #444;
 }
 
 /* 환율 박스 기본 스타일 (라이트 모드) */
 .exchange-rate-box {
-  background-color: #ffffff;
-  color: #000000;
-  border: 1px solid #ddd;
-  padding: 15px;
-  margin: 10px 0;
-  border-radius: 4px;
-  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+    background-color: #ffffff;
+    color: #000000;
+    border: 1px solid #ddd;
+    padding: 15px;
+    margin: 10px 0;
+    border-radius: 4px;
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
 }
 
 /* 다크 모드일 때 환율 박스 스타일 변경 (우선순위를 높이기 위해 !important 사용) */
 body.dark-mode .exchange-rate-box {
-  background-color: #2c2c2c !important;
-  color: #ffffff !important;
-  border-color: #444 !important;
+    background-color: #2c2c2c !important;
+    color: #ffffff !important;
+    border-color: #444 !important;
 }
