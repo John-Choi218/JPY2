@@ -1489,3 +1489,116 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 });
+
+// 현재 환율을 가져오는 함수 (이미 구현되어 있을 것으로 가정)
+async function fetchCurrentExchangeRate() {
+    try {
+        const response = await fetch('YOUR_EXCHANGE_RATE_API_ENDPOINT');
+        const data = await response.json();
+        // API 응답 구조에 맞게 데이터를 파싱하세요
+        return data.currentRate; // 현재 환율 반환
+    } catch (error) {
+        console.error('환율을 가져오는 데 실패했습니다:', error);
+        return null;
+    }
+}
+
+// 푸시 알림 권한 요청 함수 (이미 구현되어 있을 수 있음)
+async function requestNotificationPermission() {
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        alert('푸시 알림 권한이 필요합니다.');
+    }
+}
+
+// 푸시 알림 보내는 함수
+function sendPushNotification(title, body) {
+    if (Notification.permission === 'granted') {
+        navigator.serviceWorker.getRegistration().then(registration => {
+            registration.showNotification(title, {
+                body: body,
+                icon: '/images/icon-192.png', // 아이콘 경로
+            });
+        });
+    }
+}
+
+// 푸시 알림 조건 검사 및 전송 함수
+async function checkAndSendNotifications() {
+    const currentRate = await fetchCurrentExchangeRate();
+    if (currentRate === null) return;
+
+    // Firestore에서 모든 투자 내역 가져오기
+    const investmentsSnapshot = await db.collection('investments').get();
+    const investments = investmentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+    }));
+
+    if (investments.length === 0) return;
+
+    // 매수 금액 중 가장 낮은 금액 찾기
+    const minBuyAmount = Math.min(...investments.map(inv => inv.exchangeRate));
+    // 매도 금액 중 가장 낮은 금액 찾기 (여기서는 매도 금액 필드가 있다고 가정)
+    const minSellAmount = Math.min(...investments.map(inv => inv.sellExchangeRate || inv.exchangeRate));
+
+    // 로컬 스토리지에서 이전 알림 상태 가져오기
+    const buyNotification = localStorage.getItem('buyNotification');
+    const sellNotification = localStorage.getItem('sellNotification');
+
+    // 매수 조건: 현재 환율이 최소 매수 금액 - 2 이하이고, 이전에 알림을 보내지 않았다면
+    if (currentRate <= (minBuyAmount - 2)) {
+        if (buyNotification !== 'sent') {
+            sendPushNotification('매수 알림', `현재 환율이 설정한 최소 매수 금액(${minBuyAmount}원)보다 2원 이하로 떨어졌습니다.`);
+            localStorage.setItem('buyNotification', 'sent');
+        }
+    } else {
+        // 조건이 충족되지 않으면 알림 상태 초기화
+        localStorage.setItem('buyNotification', 'not_sent');
+    }
+
+    // 매도 조건: 현재 환율이 최소 매도 금액 + 2 이상이고, 이전에 알림을 보내지 않았다면
+    if (currentRate >= (minSellAmount + 2)) {
+        if (sellNotification !== 'sent') {
+            sendPushNotification('매도 알림', `현재 환율이 설정한 최소 매도 금액(${minSellAmount}원)보다 2원 이상 상승했습니다.`);
+            localStorage.setItem('sellNotification', 'sent');
+        }
+    } else {
+        // 조건이 충족되지 않으면 알림 상태 초기화
+        localStorage.setItem('sellNotification', 'not_sent');
+    }
+}
+
+// 페이지 로드 시 초기 설정
+document.addEventListener('DOMContentLoaded', function () {
+    // 다크 모드 설정 (이미 구현됨)
+    const darkModeBtn = document.getElementById('dark-mode-btn');
+
+    // 저장된 다크 모드 설정 불러오기
+    if (localStorage.getItem('darkMode') === 'enabled') {
+        document.body.classList.add('dark-mode');
+        darkModeBtn.textContent = '라이트 모드';
+    }
+
+    darkModeBtn.addEventListener('click', function () {
+        // body에 다크 모드 클래스 토글
+        document.body.classList.toggle('dark-mode');
+
+        // 현재 모드에 따라 버튼 텍스트 및 localStorage 업데이트
+        if (document.body.classList.contains('dark-mode')) {
+            darkModeBtn.textContent = '라이트 모드';
+            localStorage.setItem('darkMode', 'enabled');
+        } else {
+            darkModeBtn.textContent = '다크 모드';
+            localStorage.setItem('darkMode', 'disabled');
+        }
+    });
+
+    // 푸시 알림 권한 요청
+    requestNotificationPermission();
+
+    // 정기적으로 푸시 알림 조건 검사 (예: 매 5분마다)
+    setInterval(checkAndSendNotifications, 5 * 60 * 1000); // 5분 마다 실행
+    // 페이지 로드 시 한 번 실행
+    checkAndSendNotifications();
+});
