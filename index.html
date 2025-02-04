@@ -15,7 +15,7 @@
         <h1>엔화 투자 장부</h1>
         
         <!-- 현재 환율 표시 섹션 추가 -->
-        <div class="current-rate">
+        <div class="current-rate exchange-rate-box">
             <h3>현재 환율 (100엔)</h3>
             <p id="currentRate">로딩중...</p>
         </div>
@@ -103,9 +103,12 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-messaging-compat.js"></script>
+    
+    <!-- script.js 파일 연결 -->
     <script src="script.js"></script>
+    
+    <!-- 서비스 워커 등록 -->
     <script>
-        // 서비스 워커 등록
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
@@ -117,30 +120,6 @@
                     });
             });
         }
-
-        document.addEventListener('DOMContentLoaded', function () {
-            const darkModeBtn = document.getElementById('dark-mode-btn');
-
-            // 저장된 다크 모드 설정 불러오기
-            if (localStorage.getItem('darkMode') === 'enabled') {
-                document.body.classList.add('dark-mode');
-                darkModeBtn.textContent = '라이트 모드';
-            }
-
-            darkModeBtn.addEventListener('click', function () {
-                // body에 다크 모드 클래스 토글
-                document.body.classList.toggle('dark-mode');
-
-                // 현재 모드에 따라 버튼 텍스트 및 localStorage 업데이트
-                if (document.body.classList.contains('dark-mode')) {
-                    darkModeBtn.textContent = '라이트 모드';
-                    localStorage.setItem('darkMode', 'enabled');
-                } else {
-                    darkModeBtn.textContent = '다크 모드';
-                    localStorage.setItem('darkMode', 'disabled');
-                }
-            });
-        });
     </script>
 </body>
 </html>
