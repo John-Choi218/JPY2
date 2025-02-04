@@ -1232,3 +1232,9 @@ async function requestNotificationPermission() {
 async function sendPushNotification(title, body, data = {}) {
     return await sendNotification(title, body, data);
 }
+
+// FCM 토큰 새로고침 함수
+function refreshFCMToken() {
+    // 페이지 새로고침
+    location.reload();
+}
