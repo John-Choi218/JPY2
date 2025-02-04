@@ -25,6 +25,7 @@
             <button id="openSettings" class="settings-button">
                 ⚙️ 설정
             </button>
+            <button id="dark-mode-btn" class="header-btn">다크 모드</button>
         </div>
         
         <!-- 투자 입력 폼 -->
@@ -116,6 +117,22 @@
                     });
             });
         }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            const darkModeBtn = document.getElementById('dark-mode-btn');
+
+            darkModeBtn.addEventListener('click', function () {
+                // body에 다크 모드 클래스 토글
+                document.body.classList.toggle('dark-mode');
+                
+                // 버튼 텍스트 업데이트 (현재 상태에 따라 변경)
+                if (document.body.classList.contains('dark-mode')) {
+                    darkModeBtn.textContent = '라이트 모드';
+                } else {
+                    darkModeBtn.textContent = '다크 모드';
+                }
+            });
+        });
     </script>
 </body>
 </html>
