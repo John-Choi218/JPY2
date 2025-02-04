@@ -278,6 +278,7 @@ th {
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     text-align: center;
+    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .current-rate h3 {
@@ -291,6 +292,65 @@ th {
     font-size: 1.2rem;
     font-weight: bold;
     color: #333;
+}
+
+/* 다크 모드일 때 현재 환율 표시 스타일 변경 */
+body.dark-mode .current-rate {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+}
+
+body.dark-mode .current-rate h3 {
+    color: #ffffff;
+}
+
+body.dark-mode .current-rate p {
+    color: #ffffff;
+}
+
+/* 기타 다크 모드 스타일 예시 */
+body.dark-mode .input-section {
+    background-color: #1e1e1e;
+    box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+}
+
+body.dark-mode .input-section label {
+    color: #dddddd;
+}
+
+body.dark-mode input {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border: 1px solid #555555;
+}
+
+body.dark-mode table {
+    background-color: #1e1e1e;
+    color: #ffffff;
+}
+
+body.dark-mode th {
+    background-color: #2c2c2c;
+    color: #ffffff;
+}
+
+body.dark-mode td {
+    border-color: #555555;
+}
+
+body.dark-mode .card {
+    background-color: #1e1e1e;
+    box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+}
+
+body.dark-mode .settings-button {
+    background-color: #6c757d;
+    color: #ffffff;
+}
+
+body.dark-mode .settings-button:hover {
+    background-color: #5a6268;
 }
 
 /* 모바일 대응 */
@@ -309,6 +369,11 @@ th {
     background-color: #f0f0f0;
 }
 
+.header.dark-mode .header {
+    background-color: #1f1f1f;
+}
+
+/* 설정 버튼 및 다크 모드 버튼 스타일 수정 */
 .header-btn {
     margin-left: 10px;
     padding: 5px 10px;  /* 좌우 패딩을 줄여 가로폭을 축소 */
@@ -327,9 +392,9 @@ th {
 }
 
 /* 버튼의 가로 폭을 일정하게 제한 (설정 버튼과 다크 모드 버튼 모두 적용) */
-#settings-btn,
+#openSettings,
 #dark-mode-btn {
-    width: 80px;  /* 원하는 가로 폭으로 조정하세요 */
+    width: 80px;  /* 원하는 가로 폭으로 조정 */
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -346,4 +411,40 @@ th {
     a {
         color: #82aaff;
     }
+}
+
+/* 예시: 각 항목 내용 부분 (기본 모드) */
+.content-item {
+  background-color: #ffffff; /* 기본 흰색 배경 */
+  color: #000000;
+  padding: 15px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 다크 모드일 때, 각 항목 내용 부분의 스타일 변경 */
+body.dark-mode .content-item {
+  background-color: #2c2c2c; /* 다크 모드에 어울리는 어두운 배경색 */
+  color: #ffffff;
+  border-color: #444;
+}
+
+/* 환율 박스 기본 스타일 (라이트 모드) */
+.exchange-rate-box {
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid #ddd;
+  padding: 15px;
+  margin: 10px 0;
+  border-radius: 4px;
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+
+/* 다크 모드일 때 환율 박스 스타일 변경 (우선순위를 높이기 위해 !important 사용) */
+body.dark-mode .exchange-rate-box {
+  background-color: #2c2c2c !important;
+  color: #ffffff !important;
+  border-color: #444 !important;
 }
