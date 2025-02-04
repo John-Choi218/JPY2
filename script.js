@@ -1238,3 +1238,17 @@ function refreshFCMToken() {
     // 페이지 새로고침
     location.reload();
 }
+
+// 페이지 로드 시 다크 모드 상태 유지
+document.addEventListener('DOMContentLoaded', () => {
+    const isDarkMode = localStorage.getItem('darkMode') === 'true'; // 로컬 스토리지에서 다크 모드 상태 확인
+    if (isDarkMode) {
+        document.body.classList.add('dark-mode'); // 다크 모드 클래스 추가
+    }
+});
+
+// 다크 모드 토글 함수 수정
+function toggleDarkMode() {
+    const isDarkMode = document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', isDarkMode); // 다크 모드 상태를 로컬 스토리지에 저장
+}
