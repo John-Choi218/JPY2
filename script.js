@@ -4,8 +4,8 @@ let completedInvestments = [];
 
 // 전역 변수에 설정값 추가
 let settings = {
-    buyThreshold: 0,
-    sellThreshold: 0
+    buyThreshold: 2, // 매수 알림 기준 (원 단위)
+    sellThreshold: 2 // 매도 알림 기준 (원 단위)
 };
 
 // Firebase 초기화
@@ -225,6 +225,9 @@ async function sellInvestment(id) {
         
         updateTables();
         updateSummary();
+        
+        // 투자 완료 알림 전송
+        await sendInvestmentCompletedNotification(id, investment.amountYen);
     } catch (error) {
         console.error('매도 처리 실패:', error);
         alert('매도 처리에 실패했습니다.');
@@ -306,8 +309,8 @@ async function loadSettings() {
         } else {
             // 기본값 설정
             settings = {
-                buyThreshold: 0.5,
-                sellThreshold: 0.5
+                buyThreshold: 2, // 기본값: 2원
+                sellThreshold: 2 // 기본값: 2원
             };
             // 기본값을 Firestore에 저장
             await saveSettings();
@@ -319,8 +322,8 @@ async function loadSettings() {
         console.error('설정 로드 실패:', error);
         // 오류 발생 시 기본값 사용
         settings = {
-            buyThreshold: 0.5,
-            sellThreshold: 0.5
+            buyThreshold: 2,
+            sellThreshold: 2
         };
     }
 }
@@ -339,7 +342,7 @@ document.getElementById('openSettings').addEventListener('click', async function
     // 현재 설정값 가져오기
     try {
         const doc = await db.collection('settings').doc('thresholds').get();
-        const currentSettings = doc.exists ? doc.data() : { buyThreshold: 0.5, sellThreshold: 0.5 };
+        const currentSettings = doc.exists ? doc.data() : { buyThreshold: 2, sellThreshold: 2 };
         
         // SweetAlert2로 설정 모달 표시
         const { value: formValues } = await Swal.fire({
@@ -397,6 +400,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
         await loadData();
         await loadSettings();
+        
+        initializeDarkMode();
+        requestNotificationPermission();
+        startExchangeRateUpdates();  // 환율 업데이트 시마다 checkAndSendNotifications 호출됨
     } catch (error) {
         console.error('초기 로드 중 오류 발생:', error);
     }
@@ -798,6 +805,11 @@ async function sendNotification(title, body, data = {}) {
     }
 }
 
+// sendPushNotification 함수 정의 (방법 2)
+async function sendPushNotification(title, body, data = {}) {
+    return await sendNotification(title, body, data);
+}
+
 // 목표가 달성되었을 때 알림
 async function sendTargetReachedNotification(rate, targetRate, type) {
     try {
@@ -837,7 +849,6 @@ async function sendInvestmentCompletedNotification(investmentId, amount) {
             investmentId: investmentId,
             amount: amount
         });
-        
         console.log('투자 완료 알림 전송됨');
     } catch (error) {
         console.error('투자 완료 알림 실패:', error);
@@ -867,104 +878,6 @@ async function sendExchangeRateChangeNotification(newRate, oldRate) {
 }
 
 // 테스트 알림
-async function sendTestNotification() {
-    try {
-        const title = '테스트 알림';
-        const body = `테스트 알림입니다. (${new Date().toLocaleString()})`;
-        
-        await sendNotification(title, body, {
-            type: 'test',
-            timestamp: new Date().toISOString()
-        });
-        
-        Swal.fire({
-            icon: 'success',
-            title: '알림 전송 완료',
-            text: '테스트 알림이 전송되었습니다.'
-        });
-    } catch (error) {
-        console.error('테스트 알림 실패:', error);
-        Swal.fire({
-            icon: 'error',
-            title: '알림 전송 실패',
-            text: `오류: ${error.message}`
-        });
-    }
-}
-
-// 포그라운드 메시지 핸들러 설정
-function setupMessageHandler() {
-    const messaging = firebase.messaging();
-    messaging.onMessage(async (payload) => {
-        console.log('포그라운드 메시지 수신:', payload);
-        
-        const registration = await navigator.serviceWorker.getRegistration();
-        if (registration) {
-            await registration.showNotification(payload.notification.title, {
-                body: payload.notification.body,
-                icon: '/icon.png',
-                vibrate: [200, 100, 200],
-                tag: payload.data?.type || 'fcm-notification',
-                data: payload.data
-            });
-        }
-    });
-}
-
-// 페이지 로드 시 메시지 핸들러 설정
-document.addEventListener('DOMContentLoaded', () => {
-    setupMessageHandler();
-    // ... 기존 코드 ...
-});
-
-// 환율 체크 및 알림 함수
-async function checkRateAndNotify(currentRate) {
-    if (!messagingToken) return;
-    
-    currentInvestments.forEach(async (inv) => {
-        // 각 투자 내역의 매수/매도 목표가 계산
-        const buyTarget = inv.exchangeRate - settings.buyThreshold;  // 매수 목표가
-        const sellTarget = inv.exchangeRate + settings.sellThreshold;  // 매도 목표가
-        
-        console.log('=== 환율 체크 ===');
-        console.log('투자 ID:', inv.id);
-        console.log('매수 목표가:', buyTarget.toFixed(2));
-        console.log('매도 목표가:', sellTarget.toFixed(2));
-        console.log('현재 환율:', currentRate);
-        
-        // 매수 알림 (현재 환율이 매수 목표가보다 1원 이상 낮을 때)
-        if (currentRate <= (buyTarget - 1)) {
-            try {
-                await db.collection('notifications').add({
-                    token: messagingToken,
-                    title: '매수 기회!',
-                    body: `${new Date(inv.date).toLocaleDateString()} 매수건의 매수 목표가(${buyTarget.toFixed(2)}원)보다 ${(buyTarget - currentRate).toFixed(2)}원 낮습니다.\n현재 환율: ${currentRate}원`,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                console.log('매수 알림 전송됨');
-            } catch (error) {
-                console.error('매수 알림 저장 실패:', error);
-            }
-        }
-        
-        // 매도 알림 (현재 환율이 매도 목표가보다 1원 이상 높을 때)
-        if (currentRate >= (sellTarget + 1)) {
-            try {
-                await db.collection('notifications').add({
-                    token: messagingToken,
-                    title: '매도 기회!',
-                    body: `${new Date(inv.date).toLocaleDateString()} 매수건의 매도 목표가(${sellTarget.toFixed(2)}원)보다 ${(currentRate - sellTarget).toFixed(2)}원 높습니다.\n현재 환율: ${currentRate}원`,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                console.log('매도 알림 전송됨');
-            } catch (error) {
-                console.error('매도 알림 저장 실패:', error);
-            }
-        }
-    });
-}
-
-// 테스트 알림 함수 수정
 async function sendTestNotification() {
     try {
         console.log('테스트 알림 시작...');
@@ -1037,6 +950,31 @@ async function sendTestNotification() {
         });
     }
 }
+
+// 포그라운드 메시지 핸들러 설정
+function setupMessageHandler() {
+    const messaging = firebase.messaging();
+    messaging.onMessage(async (payload) => {
+        console.log('포그라운드 메시지 수신:', payload);
+        
+        const registration = await navigator.serviceWorker.getRegistration();
+        if (registration) {
+            await registration.showNotification(payload.notification.title, {
+                body: payload.notification.body,
+                icon: '/icon.png',
+                vibrate: [200, 100, 200],
+                tag: 'fcm-notification',
+                data: payload.data
+            });
+        }
+    });
+}
+
+// 페이지 로드 시 메시지 핸들러 설정
+document.addEventListener('DOMContentLoaded', () => {
+    setupMessageHandler();
+    // ... 기존 코드 ...
+});
 
 // 테스트 버튼 추가
 document.addEventListener('DOMContentLoaded', () => {
@@ -1118,13 +1056,43 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 });
 
-// 환율 업데이트 함수
+// 환율 정보 가져오기 함수
+async function fetchExchangeRate() {
+    try {
+        console.log('환율 정보 요청 시작');
+        const response = await fetch('https://m.search.naver.com/p/csearch/content/qapirender.nhn?key=calculator&pkid=141&q=%ED%99%98%EC%9C%A8&where=m&u1=keb&u6=standardUnit&u7=0&u3=JPY&u4=KRW&u8=down&u2=100', {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log('네이버 환율 데이터:', data);
+
+        if (data && data.country && data.country[1]) {
+            // 문자열로 반환된 환율을 파싱 후 소수점 두자리로 고정
+            const newRate = parseFloat(data.country[1].value.replace(/,/g, '')).toFixed(2);
+            return parseFloat(newRate);
+        } else {
+            throw new Error('환율 데이터를 찾을 수 없습니다');
+        }
+    } catch (error) {
+        console.error('환율 정보 가져오기 실패:', error);
+        return null;
+    }
+}
+
+// 환율 업데이트 함수: 업데이트될 때마다 현재 환율을 적용하고, 로컬 푸시 알림 조건 검사 호출
 async function updateCurrentRate() {
     try {
         const now = new Date();
         console.log('환율 업데이트 시작:', now.toLocaleString());
         
-        // 네이버 환율 API 호출 (JPY-KRW)
         const response = await fetch('https://m.search.naver.com/p/csearch/content/qapirender.nhn?key=calculator&pkid=141&q=%ED%99%98%EC%9C%A8&where=m&u1=keb&u6=standardUnit&u7=0&u3=JPY&u4=KRW&u8=down&u2=100', {
             method: 'GET',
             headers: {
@@ -1140,6 +1108,7 @@ async function updateCurrentRate() {
         console.log('네이버 환율 데이터:', data);
         
         if (data && data.country && data.country[1]) {
+            // 가져온 환율 정보를 파싱합니다.
             const rate = parseFloat(data.country[1].value.replace(/,/g, '')).toFixed(2);
             
             console.log('=== 환율 정보 ===');
@@ -1152,8 +1121,8 @@ async function updateCurrentRate() {
                 console.log('환율 업데이트 완료');
             }
             
-            // 환율 체크 및 알림
-            checkRateAndNotify(parseFloat(rate));
+            // 환율 업데이트 될 때마다 최소 매수 목표 조건 검사 및 알림 전송 (이미 가져온 환율값을 이용)
+            await checkAndSendNotifications(parseFloat(rate));
         } else {
             throw new Error('환율 데이터를 찾을 수 없습니다');
         }
@@ -1167,121 +1136,13 @@ async function updateCurrentRate() {
     }
 }
 
-// 환율 정보 가져오기 함수
-async function fetchExchangeRate() {
-    try {
-        console.log('환율 정보 요청 시작');
-        const response = await fetch('https://m.search.naver.com/p/csearch/content/qapirender.nhn?key=calculator&pkid=141&q=%ED%99%98%EC%9C%A8&where=m&u1=keb&u6=standardUnit&u7=0&u3=JPY&u4=KRW&u8=down&u2=100', {
-            method: 'GET',
-            headers: {
-                'Accept': 'application/json'
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log('네이버 환율 데이터:', data);
-        
-        if (data && data.country && data.country[1]) {
-            const newRate = parseFloat(data.country[1].value.replace(/,/g, '')).toFixed(2);
-            console.log('현재 환율:', newRate);
-            
-            // 이전 환율 가져오기
-            const oldRate = localStorage.getItem('lastRate');
-            const oldRateNum = oldRate ? parseFloat(oldRate) : null;
-            
-            // 환율 표시 업데이트
-            const rateElement = document.getElementById('currentRate');
-            if (rateElement) {
-                const now = new Date();
-                rateElement.textContent = `${newRate}원 (${now.toLocaleTimeString()})`;
-                console.log('환율 표시 업데이트됨:', rateElement.textContent);
-            }
-            
-            // 현재 환율 저장
-            localStorage.setItem('lastRate', newRate);
-            
-            // 목표 환율 확인 및 알림
-            await checkTargetRates(newRate);
-            await checkInvestmentAlerts(newRate);
-            
-            return parseFloat(newRate);
-        } else {
-            throw new Error('환율 데이터를 찾을 수 없습니다');
-        }
-    } catch (error) {
-        console.error('환율 정보 가져오기 실패:', error);
-        console.error('상세 에러:', error.message);
-        
-        const rateElement = document.getElementById('currentRate');
-        if (rateElement) {
-            rateElement.textContent = '환율 정보 없음';
-        }
-        
-        return null;
-    }
-}
-
-// 목표 환율 확인 함수
-async function checkTargetRates(currentRate) {
-    // 이 함수는 이제 환율 변동 알림을 보내지 않습니다.
-    // 필요한 경우 이곳에 다른 로직을 추가할 수 있습니다.
-}
-
-// 투자 알림 체크 함수
-async function checkInvestmentAlerts(currentRate) {
-    try {
-        currentInvestments.forEach(async (inv) => {
-            const buyTarget = inv.exchangeRate - settings.buyThreshold;  // 매수 목표가
-            const sellTarget = inv.exchangeRate + settings.sellThreshold;  // 매도 목표가
-            
-            console.log('=== 투자 알림 체크 ===');
-            console.log('투자 ID:', inv.id);
-            console.log('매수 목표가:', buyTarget.toFixed(2));
-            console.log('매도 목표가:', sellTarget.toFixed(2));
-            console.log('현재 환율:', currentRate);
-            
-            // 매수 알림 (현재 환율이 매수 목표가보다 1원 이상 낮을 때)
-            if (currentRate <= (buyTarget - 1)) {
-                await sendNotification(
-                    '매수 기회!',
-                    `${new Date(inv.date).toLocaleDateString()} 매수건의 매수 목표가(${buyTarget.toFixed(2)}원)보다 ${(buyTarget - currentRate).toFixed(2)}원 낮습니다.\n현재 환율: ${currentRate}원`,
-                    {
-                        type: 'buy_opportunity',
-                        investmentId: inv.id
-                    }
-                );
-                console.log('매수 알림 전송됨');
-            }
-            
-            // 매도 알림 (현재 환율이 매도 목표가보다 1원 이상 높을 때)
-            if (currentRate >= (sellTarget + 1)) {
-                await sendNotification(
-                    '매도 기회!',
-                    `${new Date(inv.date).toLocaleDateString()} 매수건의 매도 목표가(${sellTarget.toFixed(2)}원)보다 ${(currentRate - sellTarget).toFixed(2)}원 높습니다.\n현재 환율: ${currentRate}원`,
-                    {
-                        type: 'sell_opportunity',
-                        investmentId: inv.id
-                    }
-                );
-                console.log('매도 알림 전송됨');
-            }
-        });
-    } catch (error) {
-        console.error('투자 알림 체크 중 오류:', error);
-    }
-}
-
-// 환율 업데이트 주기 설정
+// 환율 업데이트 주기 설정: 3분마다 updateCurrentRate 호출 (updateCurrentRate 내부에서 푸시 알림 검사 진행)
 function startExchangeRateUpdates() {
-    // 즉시 한 번 실행
-    fetchExchangeRate();
+    // 즉시 실행
+    updateCurrentRate();
     
-    // 5분마다 업데이트 (5분 = 5 * 60 * 1000 밀리초)
-    setInterval(fetchExchangeRate, 5 * 60 * 1000);
+    // 3분마다 실행 (3분 = 3 * 60 * 1000 밀리초)
+    setInterval(updateCurrentRate, 3 * 60 * 1000);
 }
 
 // 페이지 로드 시 환율 업데이트 시작
@@ -1289,303 +1150,44 @@ document.addEventListener('DOMContentLoaded', () => {
     startExchangeRateUpdates();
 });
 
-// 콘솔 로그 UI 생성 및 관리
-class ConsoleUI {
-    constructor() {
-        this.logs = [];
-        this.maxLogs = 50; // 최대 로그 수
-        this.createUI();
-        this.interceptConsole();
+// 환율 체크 및 알림 함수
+async function checkAndSendNotifications(currentRate) {
+    // 전달받은 currentRate 사용, 없으면 새로 가져오기
+    if (typeof currentRate === 'undefined') {
+        currentRate = await fetchExchangeRate();
+        if (currentRate === null) return;
     }
-
-    createUI() {
-        // 콘솔 컨테이너 생성
-        const container = document.createElement('div');
-        container.id = 'console-container';
-        container.style.cssText = `
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            max-height: 200px;
-            background: rgba(0, 0, 0, 0.8);
-            color: #fff;
-            font-family: monospace;
-            font-size: 12px;
-            overflow-y: auto;
-            z-index: 9999;
-            padding: 10px;
-            display: none;
-        `;
-
-        // 헤더 생성
-        const header = document.createElement('div');
-        header.style.cssText = `
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 5px;
-            border-bottom: 1px solid #444;
-            padding-bottom: 5px;
-        `;
-
-        // 제목
-        const title = document.createElement('span');
-        title.textContent = 'Console Logs';
-        
-        // 버튼 컨테이너
-        const buttons = document.createElement('div');
-        
-        // 클리어 버튼
-        const clearBtn = document.createElement('button');
-        clearBtn.textContent = 'Clear';
-        clearBtn.style.cssText = `
-            background: #444;
-            color: #fff;
-            border: none;
-            padding: 2px 8px;
-            margin-left: 10px;
-            cursor: pointer;
-            font-size: 11px;
-        `;
-        clearBtn.onclick = () => this.clearLogs();
-
-        // 닫기 버튼
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = 'Close';
-        closeBtn.style.cssText = clearBtn.style.cssText;
-        closeBtn.onclick = () => this.toggleConsole(false);
-
-        buttons.appendChild(clearBtn);
-        buttons.appendChild(closeBtn);
-        header.appendChild(title);
-        header.appendChild(buttons);
-
-        // 로그 컨테이너
-        const logContainer = document.createElement('div');
-        logContainer.id = 'console-logs';
-        logContainer.style.cssText = `
-            overflow-y: auto;
-            max-height: 170px;
-        `;
-
-        container.appendChild(header);
-        container.appendChild(logContainer);
-        document.body.appendChild(container);
-
-        // 토글 버튼 생성
-        const toggleBtn = document.createElement('button');
-        toggleBtn.textContent = 'Show Console';
-        toggleBtn.style.cssText = `
-            position: fixed;
-            bottom: 10px;
-            right: 10px;
-            background: #444;
-            color: #fff;
-            border: none;
-            padding: 5px 10px;
-            cursor: pointer;
-            z-index: 10000;
-            font-size: 12px;
-        `;
-        toggleBtn.onclick = () => this.toggleConsole();
-        document.body.appendChild(toggleBtn);
-    }
-
-    interceptConsole() {
-        const originalConsole = {
-            log: console.log,
-            error: console.error,
-            warn: console.warn,
-            info: console.info
-        };
-
-        const self = this;
-        
-        // 콘솔 메소드 가로채기
-        ['log', 'error', 'warn', 'info'].forEach(method => {
-            console[method] = function() {
-                originalConsole[method].apply(console, arguments);
-                self.addLog(method, Array.from(arguments));
-            };
-        });
-    }
-
-    addLog(type, args) {
-        const logElement = document.createElement('div');
-        logElement.style.cssText = `
-            padding: 2px 0;
-            border-bottom: 1px solid #333;
-            word-break: break-all;
-        `;
-
-        // 타임스탬프 추가
-        const time = new Date().toLocaleTimeString();
-        const timeSpan = document.createElement('span');
-        timeSpan.style.color = '#888';
-        timeSpan.textContent = `[${time}] `;
-        logElement.appendChild(timeSpan);
-
-        // 로그 타입에 따른 스타일
-        const typeColors = {
-            error: '#ff4444',
-            warn: '#ffaa00',
-            info: '#44aaff',
-            log: '#fff'
-        };
-
-        logElement.style.color = typeColors[type];
-
-        // 로그 내용 추가
-        const content = args.map(arg => {
-            if (typeof arg === 'object') {
-                return JSON.stringify(arg);
-            }
-            return String(arg);
-        }).join(' ');
-        
-        logElement.appendChild(document.createTextNode(content));
-
-        const logContainer = document.getElementById('console-logs');
-        if (logContainer) {
-            logContainer.appendChild(logElement);
-            logContainer.scrollTop = logContainer.scrollHeight;
-
-            // 최대 로그 수 제한
-            while (logContainer.children.length > this.maxLogs) {
-                logContainer.removeChild(logContainer.firstChild);
-            }
-        }
-    }
-
-    clearLogs() {
-        const logContainer = document.getElementById('console-logs');
-        if (logContainer) {
-            logContainer.innerHTML = '';
-        }
-    }
-
-    toggleConsole(show) {
-        const container = document.getElementById('console-container');
-        if (container) {
-            if (show === undefined) {
-                show = container.style.display === 'none';
-            }
-            container.style.display = show ? 'block' : 'none';
-        }
-    }
-}
-
-// 페이지 로드 시 콘솔 UI 초기화
-document.addEventListener('DOMContentLoaded', () => {
-    window.consoleUI = new ConsoleUI();
-    // ... 기존 코드 ...
-});
-
-document.addEventListener('DOMContentLoaded', function () {
-    const darkModeToggle = document.getElementById('darkModeToggle');
-    if (darkModeToggle) {
-        darkModeToggle.addEventListener('click', function () {
-            console.log('다크 모드 버튼 클릭됨'); // 디버깅용 로그 추가
-            document.body.classList.toggle('dark-mode');
-
-            if (document.body.classList.contains('dark-mode')) {
-                darkModeToggle.textContent = '라이트 모드';
-                localStorage.setItem('darkMode', 'enabled');
-                console.log('다크 모드 활성화'); // 디버깅용 로그 추가
-            } else {
-                darkModeToggle.textContent = '다크 모드';
-                localStorage.setItem('darkMode', 'disabled');
-                console.log('다크 모드 비활성화'); // 디버깅용 로그 추가
-            }
-        });
-    }
-});
-
-// 현재 환율을 가져오는 함수 (이미 구현되어 있을 것으로 가정)
-async function fetchCurrentExchangeRate() {
-    try {
-        const response = await fetch('YOUR_EXCHANGE_RATE_API_ENDPOINT');
-        const data = await response.json();
-        // API 응답 구조에 맞게 데이터를 파싱하세요
-        return data.currentRate; // 현재 환율 반환
-    } catch (error) {
-        console.error('환율을 가져오는 데 실패했습니다:', error);
-        return null;
-    }
-}
-
-// 푸시 알림 권한 요청 함수 (이미 구현되어 있을 수 있음)
-async function requestNotificationPermission() {
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-        alert('푸시 알림 권한이 필요합니다.');
-    }
-}
-
-// 푸시 알림 보내는 함수
-function sendPushNotification(title, body) {
-    if (Notification.permission === 'granted') {
-        navigator.serviceWorker.getRegistration().then(registration => {
-            registration.showNotification(title, {
-                body: body,
-                icon: '/images/icon-192.png', // 아이콘 경로
-            });
-        });
-    }
-}
-
-// 푸시 알림 조건 검사 및 전송 함수
-async function checkAndSendNotifications() {
-    const currentRate = await fetchCurrentExchangeRate();
-    if (currentRate === null) return;
-
-    // Firestore에서 모든 투자 내역 가져오기
-    const investmentsSnapshot = await db.collection('investments').get();
-    const investments = investmentsSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-    }));
-
-    if (investments.length === 0) return;
-
-    // 매수 금액 중 가장 낮은 금액 찾기
-    const buyTargets = investments.map(inv => inv.buyTarget).filter(target => typeof target === 'number');
+    
+    console.log(`현재 환율: ${currentRate}원`);
+    
+    // 현재 투자 내역에서 매수 목표(투자 환율 - settings.buyThreshold) 계산
+    const buyTargets = currentInvestments
+        .map(inv => inv.exchangeRate - settings.buyThreshold)
+        .filter(target => !isNaN(target));
+    
     if (buyTargets.length === 0) {
-        console.warn('매수 목표가가 설정된 투자 내역이 없습니다.');
+        console.warn("매수 목표 금액을 계산할 수 있는 투자 내역이 없습니다.");
+        return;
     }
-    const minBuyAmount = Math.min(...buyTargets);
-
-    // 매도 금액 중 가장 낮은 금액 찾기
-    const sellTargets = investments.map(inv => inv.sellTarget).filter(target => typeof target === 'number');
-    if (sellTargets.length === 0) {
-        console.warn('매도 목표가가 설정된 투자 내역이 없습니다.');
-    }
-    const minSellAmount = Math.min(...sellTargets);
-
-    // 로컬 스토리지에서 이전 알림 상태 가져오기
-    const buyNotification = localStorage.getItem('buyNotification');
-    const sellNotification = localStorage.getItem('sellNotification');
-
-    // 매수 조건: 현재 환율이 최소 매수 금액 - 2 이하이고, 이전에 알림을 보내지 않았다면
-    if (buyTargets.length > 0 && currentRate <= (minBuyAmount - 2)) {
-        if (buyNotification !== 'sent') {
-            sendPushNotification('매수 알림', `현재 환율이 설정한 최소 매수 금액(${minBuyAmount}원)보다 2원 이하로 떨어졌습니다.`);
-            localStorage.setItem('buyNotification', 'sent');
+    
+    // 모든 투자 내역 중 가장 낮은 매수 목표 금액 계산
+    const minBuyTarget = Math.min(...buyTargets);
+    console.log(`최소 매수 목표 금액: ${minBuyTarget.toFixed(2)}원`);
+    
+    // 조건: 현재 환율이 최소 매수 목표 금액에서 2원 이상 낮을 때
+    if (currentRate <= (minBuyTarget - 2)) {
+        try {
+            await sendPushNotification(
+                '매수 기회!',
+                `현재 환율(${currentRate}원)이 최소 매수 목표 금액(${minBuyTarget.toFixed(2)}원)보다 2원 이상 낮습니다.`,
+                { type: 'buy_opportunity' }
+            );
+            console.log("매수 기회 알림 전송됨");
+        } catch (error) {
+            console.error("매수 알림 전송 실패:", error);
         }
     } else {
-        // 조건이 충족되지 않으면 알림 상태 초기화
-        localStorage.setItem('buyNotification', 'not_sent');
-    }
-
-    // 매도 조건: 현재 환율이 최소 매도 금액 + 2 이상이고, 이전에 알림을 보내지 않았다면
-    if (sellTargets.length > 0 && currentRate >= (minSellAmount + 2)) {
-        if (sellNotification !== 'sent') {
-            sendPushNotification('매도 알림', `현재 환율이 설정한 최소 매도 금액(${minSellAmount}원)보다 2원 이상 상승했습니다.`);
-            localStorage.setItem('sellNotification', 'sent');
-        }
-    } else {
-        // 조건이 충족되지 않으면 알림 상태 초기화
-        localStorage.setItem('sellNotification', 'not_sent');
+        console.log("알림 조건 미충족: 현재 환율이 최소 매수 목표 금액 - 2원보다 높습니다.");
     }
 }
 
@@ -1602,31 +1204,31 @@ function initializeDarkMode() {
     }
 
     darkModeBtn.addEventListener('click', function () {
-        console.log('다크 모드 버튼 클릭됨'); // 디버깅용 로그 추가
+        console.log('다크 모드 버튼 클릭됨'); // 디버깅용 로그
         document.body.classList.toggle('dark-mode');
 
         if (document.body.classList.contains('dark-mode')) {
             darkModeBtn.textContent = '라이트 모드';
             localStorage.setItem('darkMode', 'enabled');
-            console.log('다크 모드 활성화'); // 디버깅용 로그 추가
+            console.log('다크 모드 활성화됨'); // 디버깅용 로그
         } else {
             darkModeBtn.textContent = '다크 모드';
             localStorage.setItem('darkMode', 'disabled');
-            console.log('다크 모드 비활성화'); // 디버깅용 로그 추가
+            console.log('라이트 모드 활성화됨'); // 디버깅용 로그
         }
     });
 }
 
-// 페이지 로드 시 초기 설정
-document.addEventListener('DOMContentLoaded', function () {
-    // 다크 모드 초기화
-    initializeDarkMode();
+// 푸시 알림 권한 요청 함수
+async function requestNotificationPermission() {
+    // 브라우저에서 푸시 알림 권한을 요청합니다.
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+        alert('푸시 알림 권한이 필요합니다.');
+    }
+}
 
-    // 푸시 알림 권한 요청
-    requestNotificationPermission();
-
-    // 정기적으로 푸시 알림 조건 검사 (예: 매 5분마다)
-    setInterval(checkAndSendNotifications, 5 * 60 * 1000); // 5분 마다 실행
-    // 페이지 로드 시 한 번 실행
-    checkAndSendNotifications();
-});
+// 푸시 알림 전송 함수
+async function sendPushNotification(title, body, data = {}) {
+    return await sendNotification(title, body, data);
+}
