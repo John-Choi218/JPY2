@@ -219,7 +219,8 @@ th {
 /* 헤더 액션 스타일 */
 .header-actions {
     display: flex;
-    justify-content: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
     margin-bottom: 15px;
 }
 
@@ -459,9 +460,10 @@ body.dark-mode .exchange-rate-box {
 }
 
 .header-actions button {
-    flex: 1; /* 버튼들이 균일하게 공간을 차지하도록 설정 */
-    margin: 0 3px; /* 버튼 간의 간격을 줄임 */
-    padding: 6px; /* 버튼의 패딩을 줄여서 가로폭 감소 */
-    font-size: 14px; /* 버튼의 글자 크기 조정 */
-    min-width: 60px; /* 최소 너비를 줄여서 가로폭 감소 */
+    flex: 1;
+    margin: 0 2px;
+    padding: 6px;
+    font-size: 14px;
+    min-width: 50px;
+    max-width: 100px;
 }
