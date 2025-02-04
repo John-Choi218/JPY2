@@ -1485,7 +1485,18 @@ document.addEventListener('DOMContentLoaded', function () {
     const darkModeToggle = document.getElementById('darkModeToggle');
     if (darkModeToggle) {
         darkModeToggle.addEventListener('click', function () {
+            console.log('다크 모드 버튼 클릭됨'); // 디버깅용 로그 추가
             document.body.classList.toggle('dark-mode');
+
+            if (document.body.classList.contains('dark-mode')) {
+                darkModeToggle.textContent = '라이트 모드';
+                localStorage.setItem('darkMode', 'enabled');
+                console.log('다크 모드 활성화'); // 디버깅용 로그 추가
+            } else {
+                darkModeToggle.textContent = '다크 모드';
+                localStorage.setItem('darkMode', 'disabled');
+                console.log('다크 모드 비활성화'); // 디버깅용 로그 추가
+            }
         });
     }
 });
@@ -1538,16 +1549,25 @@ async function checkAndSendNotifications() {
     if (investments.length === 0) return;
 
     // 매수 금액 중 가장 낮은 금액 찾기
-    const minBuyAmount = Math.min(...investments.map(inv => inv.exchangeRate));
-    // 매도 금액 중 가장 낮은 금액 찾기 (여기서는 매도 금액 필드가 있다고 가정)
-    const minSellAmount = Math.min(...investments.map(inv => inv.sellExchangeRate || inv.exchangeRate));
+    const buyTargets = investments.map(inv => inv.buyTarget).filter(target => typeof target === 'number');
+    if (buyTargets.length === 0) {
+        console.warn('매수 목표가가 설정된 투자 내역이 없습니다.');
+    }
+    const minBuyAmount = Math.min(...buyTargets);
+
+    // 매도 금액 중 가장 낮은 금액 찾기
+    const sellTargets = investments.map(inv => inv.sellTarget).filter(target => typeof target === 'number');
+    if (sellTargets.length === 0) {
+        console.warn('매도 목표가가 설정된 투자 내역이 없습니다.');
+    }
+    const minSellAmount = Math.min(...sellTargets);
 
     // 로컬 스토리지에서 이전 알림 상태 가져오기
     const buyNotification = localStorage.getItem('buyNotification');
     const sellNotification = localStorage.getItem('sellNotification');
 
     // 매수 조건: 현재 환율이 최소 매수 금액 - 2 이하이고, 이전에 알림을 보내지 않았다면
-    if (currentRate <= (minBuyAmount - 2)) {
+    if (buyTargets.length > 0 && currentRate <= (minBuyAmount - 2)) {
         if (buyNotification !== 'sent') {
             sendPushNotification('매수 알림', `현재 환율이 설정한 최소 매수 금액(${minBuyAmount}원)보다 2원 이하로 떨어졌습니다.`);
             localStorage.setItem('buyNotification', 'sent');
@@ -1558,7 +1578,7 @@ async function checkAndSendNotifications() {
     }
 
     // 매도 조건: 현재 환율이 최소 매도 금액 + 2 이상이고, 이전에 알림을 보내지 않았다면
-    if (currentRate >= (minSellAmount + 2)) {
+    if (sellTargets.length > 0 && currentRate >= (minSellAmount + 2)) {
         if (sellNotification !== 'sent') {
             sendPushNotification('매도 알림', `현재 환율이 설정한 최소 매도 금액(${minSellAmount}원)보다 2원 이상 상승했습니다.`);
             localStorage.setItem('sellNotification', 'sent');
@@ -1569,30 +1589,38 @@ async function checkAndSendNotifications() {
     }
 }
 
-// 페이지 로드 시 초기 설정
-document.addEventListener('DOMContentLoaded', function () {
-    // 다크 모드 설정 (이미 구현됨)
+// 다크 모드 토글 및 상태 유지 함수
+function initializeDarkMode() {
     const darkModeBtn = document.getElementById('dark-mode-btn');
 
     // 저장된 다크 모드 설정 불러오기
     if (localStorage.getItem('darkMode') === 'enabled') {
         document.body.classList.add('dark-mode');
         darkModeBtn.textContent = '라이트 모드';
+    } else {
+        darkModeBtn.textContent = '다크 모드';
     }
 
     darkModeBtn.addEventListener('click', function () {
-        // body에 다크 모드 클래스 토글
+        console.log('다크 모드 버튼 클릭됨'); // 디버깅용 로그 추가
         document.body.classList.toggle('dark-mode');
 
-        // 현재 모드에 따라 버튼 텍스트 및 localStorage 업데이트
         if (document.body.classList.contains('dark-mode')) {
             darkModeBtn.textContent = '라이트 모드';
             localStorage.setItem('darkMode', 'enabled');
+            console.log('다크 모드 활성화'); // 디버깅용 로그 추가
         } else {
             darkModeBtn.textContent = '다크 모드';
             localStorage.setItem('darkMode', 'disabled');
+            console.log('다크 모드 비활성화'); // 디버깅용 로그 추가
         }
     });
+}
+
+// 페이지 로드 시 초기 설정
+document.addEventListener('DOMContentLoaded', function () {
+    // 다크 모드 초기화
+    initializeDarkMode();
 
     // 푸시 알림 권한 요청
     requestNotificationPermission();
