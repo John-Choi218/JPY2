@@ -460,8 +460,8 @@ body.dark-mode .exchange-rate-box {
 
 .header-actions button {
     flex: 1; /* 버튼들이 균일하게 공간을 차지하도록 설정 */
-    margin: 0 5px; /* 버튼 간의 간격 조정 */
-    padding: 8px; /* 버튼의 패딩을 줄여서 가로폭 감소 */
+    margin: 0 3px; /* 버튼 간의 간격을 줄임 */
+    padding: 6px; /* 버튼의 패딩을 줄여서 가로폭 감소 */
     font-size: 14px; /* 버튼의 글자 크기 조정 */
-    min-width: 80px; /* 최소 너비를 줄여서 가로폭 감소 */
+    min-width: 60px; /* 최소 너비를 줄여서 가로폭 감소 */
 }
