@@ -50,4 +50,24 @@ self.addEventListener('activate', event => {
             );
         })
     );
+});
+
+self.addEventListener('push', function(event) {
+    const data = event.data.json();
+    const title = data.title || '알림';
+    const options = {
+        body: data.body || '',
+        icon: '/images/icon-192.png', // 아이콘 경로
+    };
+    event.waitUntil(
+        self.registration.showNotification(title, options)
+    );
+});
+
+self.addEventListener('notificationclick', function(event) {
+    event.notification.close();
+    // 알림 클릭 시 열릴 페이지 지정
+    event.waitUntil(
+        clients.openWindow('/')
+    );
 }); 
