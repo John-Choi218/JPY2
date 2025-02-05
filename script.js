@@ -236,32 +236,96 @@ async function sellInvestment(id) {
 
 // 테이블 업데이트
 function updateTables() {
-    const currentTable = document.querySelector('#currentInvestmentsTable tbody');
-    currentTable.innerHTML = currentInvestments.map(inv => {
-        const amountYen = inv.amountYen.toLocaleString();
-        const amountKrw = inv.amountKrw.toLocaleString();
-        const buyTarget = (inv.exchangeRate - settings.buyThreshold).toFixed(2);
-        const sellTarget = (inv.exchangeRate + settings.sellThreshold).toFixed(2);
-        
-        return `
-        <tr>
-            <td>${new Date(inv.date).toLocaleDateString()}</td>
-            <td>${amountYen}엔</td>
-            <td>${inv.exchangeRate.toFixed(2)}원</td>
-            <td>${amountKrw}원</td>
-            <td>
-                <div class="target-rates">
-                    <span class="buy-target">매수: ${buyTarget}원</span>
-                    <span class="sell-target">매도: ${sellTarget}원</span>
-                </div>
-                <div class="button-group">
-                    <button class="edit-button" onclick="editInvestment('${inv.id}')">수정</button>
-                    <button class="delete-button" onclick="deleteInvestment('${inv.id}')">삭제</button>
-                    <button class="sell-button" onclick="sellInvestment('${inv.id}')">매도</button>
-                </div>
-            </td>
-        </tr>
-    `}).join('');
+    // 현재 투자 내역을 날짜 기준 오름차순으로 정렬 (오래된 내역이 위, 최신 내역이 아래)
+    currentInvestments.sort((a, b) => new Date(a.date) - new Date(b.date));
+    
+    // 테이블 바디 초기화
+    const tableBody = document.querySelector('#currentInvestmentsTable tbody');
+    tableBody.innerHTML = '';
+
+    // 정렬된 투자 내역을 사용하여 테이블 행 생성
+    currentInvestments.forEach(investment => {
+        const row = document.createElement('tr');
+
+        // 날짜 셀: 투자 날짜 (locale 형식 사용)
+        const dateCell = document.createElement('td');
+        dateCell.textContent = new Date(investment.date).toLocaleDateString();
+        row.appendChild(dateCell);
+
+        // 엔화 금액 셀
+        const amountCell = document.createElement('td');
+        amountCell.textContent = investment.amountYen;
+        row.appendChild(amountCell);
+
+        // 구매 환율 셀
+        const exchangeRateCell = document.createElement('td');
+        exchangeRateCell.textContent = investment.exchangeRate;
+        row.appendChild(exchangeRateCell);
+
+        // 투자 금액(원) 셀
+        const amountKrwCell = document.createElement('td');
+        amountKrwCell.textContent = investment.amountKrw.toLocaleString() + '원';
+        row.appendChild(amountKrwCell);
+
+        // 작업 셀 생성: 매수/매도 목표가와 수정/삭제/매도 버튼 추가
+        const actionCell = document.createElement('td');
+
+        // 매수 목표, 매도 목표 계산 (예시: 매수 목표 = 구매 환율 - settings.buyThreshold, 매도 목표 = 구매 환율 + settings.sellThreshold)
+        const buyTargetVal = Number(investment.exchangeRate) - settings.buyThreshold;
+        const sellTargetVal = Number(investment.exchangeRate) + settings.sellThreshold;
+
+        // 매수 목표 span 생성 (한 줄)
+        const buySpan = document.createElement('span');
+        buySpan.className = 'buy-target';
+        buySpan.textContent = `매수: ${buyTargetVal.toFixed(2)}원`;
+        actionCell.appendChild(buySpan);
+
+        // 줄바꿈 추가하여 매도가 아래에 나오도록 함
+        actionCell.appendChild(document.createElement('br'));
+
+        // 매도 목표 span 생성 (두 번째 줄)
+        const sellSpan = document.createElement('span');
+        sellSpan.className = 'sell-target';
+        sellSpan.textContent = `매도: ${sellTargetVal.toFixed(2)}원`;
+        actionCell.appendChild(sellSpan);
+
+        // 가로로 버튼들을 배치할 컨테이너 생성 (버튼들은 flex 레이아웃으로 가로 배치)
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'action-buttons';
+
+        // 수정 버튼 생성
+        const editButton = document.createElement('button');
+        editButton.textContent = '수정';
+        editButton.className = 'table-btn edit';
+        editButton.onclick = function() {
+            editInvestment(investment.id);
+        };
+        buttonContainer.appendChild(editButton);
+
+        // 삭제 버튼 생성
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = '삭제';
+        deleteButton.className = 'table-btn delete';
+        deleteButton.onclick = function() {
+            deleteInvestment(investment.id);
+        };
+        buttonContainer.appendChild(deleteButton);
+
+        // 매도 버튼 생성
+        const sellButton = document.createElement('button');
+        sellButton.textContent = '매도';
+        sellButton.className = 'table-btn sell';
+        sellButton.onclick = function() {
+            sellInvestment(investment.id);
+        };
+        buttonContainer.appendChild(sellButton);
+
+        // 버튼 컨테이너를 작업 셀에 추가
+        actionCell.appendChild(buttonContainer);
+
+        row.appendChild(actionCell);
+        tableBody.appendChild(row);
+    });
     
     // 투자 실적 테이블 업데이트
     const historyTable = document.querySelector('#historyTable tbody');
@@ -290,28 +354,36 @@ function updateTables() {
 
 // 요약 정보 업데이트
 function updateSummary() {
-    // 총 수익 (원)
-    const totalProfit = completedInvestments.reduce((sum, inv) => sum + inv.profitLoss, 0);
-    // 총 투자 원화 금액 (구매 시점 기준)
-    const totalInvested = completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
-    // 전체 투자에 대한 전체 수익률 (백분율)
-    const overallReturn = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
-
-    let totalDays = 0;
-    if (completedInvestments.length > 0) {
+    try {
+        // 완료된 투자 데이터가 없으면 기본값 표시
+        if (!completedInvestments || completedInvestments.length === 0) {
+            document.getElementById('totalProfit').textContent = '0원';
+            document.getElementById('totalReturn').textContent = '0%';
+            return;
+        }
+        
+        // 총 수익 (원)
+        const totalProfit = completedInvestments.reduce((sum, inv) => sum + inv.profitLoss, 0);
+        // 총 투자 원화 금액 (구매 시점 기준)
+        const totalInvested = completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
+        // 전체 투자에 대한 전체 수익률 (백분율)
+        const overallReturn = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
+        
+        let totalDays = 0;
         // 모든 완료된 투자에서 첫 구매일과 마지막 매도일을 구합니다.
         const firstPurchaseTime = Math.min(...completedInvestments.map(inv => new Date(inv.date).getTime()));
         const lastSellTime = Math.max(...completedInvestments.map(inv => new Date(inv.sellDate).getTime()));
-        // 두 날짜 사이의 일수 (소수점 포함)
         totalDays = (lastSellTime - firstPurchaseTime) / (1000 * 60 * 60 * 24);
+    
+        // 총 투자 기간(일)로 전체 수익률을 나누어 총 수익률 산출
+        const totalReturn = totalDays > 0 ? overallReturn / totalDays : overallReturn;
+    
+        document.getElementById('totalProfit').textContent = `${totalProfit.toLocaleString()}원`;
+        document.getElementById('totalReturn').textContent = `${totalReturn.toFixed(2)}%`;
+    } catch (error) {
+        console.error('투자 실적 요약 업데이트 실패:', error);
+        document.getElementById('totalReturn').textContent = '데이터 로드에 실패했습니다.';
     }
-    
-    // 총 투자 기간(일)로 전체 수익률을 나누어 총 수익률 산출
-    const totalReturn = totalDays > 0 ? overallReturn / totalDays : overallReturn;
-    
-    document.getElementById('totalProfit').textContent = `${totalProfit.toLocaleString()}원`;
-    // 기존 "평균 수익률"을 "총 수익률"로 표시 (HTML 요소 id: totalReturn 로 변경)
-    document.getElementById('totalReturn').textContent = `${totalReturn.toFixed(2)}%`;
 }
 
 // 설정 로드 함수
@@ -784,17 +856,30 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 환율 체크 및 알림 함수
 async function checkAndSendNotifications(currentRate) {
-    // 전달받은 currentRate 사용, 없으면 새로 가져오기
+    // 전달받은 currentRate 사용. 없으면 새로 가져오기
     if (typeof currentRate === 'undefined') {
         currentRate = await fetchExchangeRate();
         if (currentRate === null) return;
     }
-    
+
     console.log(`현재 환율: ${currentRate}원`);
+    console.log("현재 투자 내역:", currentInvestments);
+
+    // 현재 투자 내역에서 유효한 exchangeRate 값이 있는 투자만 필터링
+    const validInvestments = currentInvestments.filter(inv => {
+        // exchangeRate 속성이 존재하고, 숫자로 변환했을 때도 숫자인지 확인합니다.
+        return inv && inv.exchangeRate !== undefined && !isNaN(Number(inv.exchangeRate));
+    });
+
+    // 유효한 투자 내역이 없다면 메시지 출력 후 종료
+    if (validInvestments.length === 0) {
+        console.warn("매수 목표 금액을 계산할 수 있는 투자 내역이 없습니다.");
+        return;
+    }
     
-    // 현재 투자 내역에서 매수 목표(투자 환율 - settings.buyThreshold) 계산
-    const buyTargets = currentInvestments
-        .map(inv => inv.exchangeRate - settings.buyThreshold)
+    // 각 유효한 투자 내역의 매수 목표 (구매 환율 - settings.buyThreshold)를 숫자로 계산
+    const buyTargets = validInvestments
+        .map(inv => Number(inv.exchangeRate) - settings.buyThreshold)
         .filter(target => !isNaN(target));
     
     if (buyTargets.length === 0) {
@@ -806,7 +891,7 @@ async function checkAndSendNotifications(currentRate) {
     const minBuyTarget = Math.min(...buyTargets);
     console.log(`최소 매수 목표 금액: ${minBuyTarget.toFixed(2)}원`);
     
-    // 조건: 현재 환율이 최소 매수 목표 금액에서 2원 이상 낮을 때
+    // 조건: 현재 환율이 최소 매수 목표 금액보다 2원 이상 낮을 때 알림 전송
     if (currentRate <= (minBuyTarget - 2)) {
         try {
             await sendPushNotification(
@@ -884,3 +969,144 @@ function toggleDarkMode() {
     const isDarkMode = document.body.classList.toggle('dark-mode');
     localStorage.setItem('darkMode', isDarkMode); // 다크 모드 상태를 로컬 스토리지에 저장
 }
+
+function parseKoreanDate(dateStr) {
+    const regex = /(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일\s*(오전|오후)\s*(\d{1,2})시\s*(\d{1,2})분\s*(\d{1,2})초\s*UTC([+-]\d+)/;
+    const match = dateStr.match(regex);
+
+    if (match) {
+        let [, year, month, day, ampm, hour, minute, second, utcOffset] = match;
+        year = parseInt(year, 10);
+        month = parseInt(month, 10) - 1; // 월은 0부터 시작
+        day = parseInt(day, 10);
+        hour = parseInt(hour, 10);
+        minute = parseInt(minute, 10);
+        second = parseInt(second, 10);
+
+        // 오전/오후 처리
+        if (ampm === "오후" && hour < 12) {
+            hour += 12;
+        }
+        if (ampm === "오전" && hour === 12) {
+            hour = 0;
+        }
+
+        // UTC 오프셋 변환
+        let offsetStr = utcOffset;
+        if (utcOffset.length === 2) {
+            offsetStr = utcOffset[0] + "0" + utcOffset[1] + ":00";
+        } else if (utcOffset.length === 3) {
+            let sign = utcOffset[0];
+            let num = utcOffset.slice(1);
+            if (num.length === 1) {
+                offsetStr = sign + "0" + num + ":00";
+            } else {
+                offsetStr = sign + num + ":00";
+            }
+        }
+
+        const isoString = `${year}-${(month + 1).toString().padStart(2, "0")}-${day.toString().padStart(2, "0")}T` +
+            `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}:${second.toString().padStart(2, "0")}` +
+            `${offsetStr}`;
+
+        const date = new Date(isoString);
+        return date;
+    } else {
+        return new Date(dateStr);
+    }
+}
+
+// 구매일 문자열에서 연/월/일을 추출하여 YYYYMMDD 숫자로 변환하는 함수
+function getYMDValue(dateStr) {
+    if (!dateStr) return 0;
+    // 불필요한 공백 제거
+    dateStr = dateStr.trim();
+    const regex = /(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/;
+    const match = dateStr.match(regex);
+    if (!match) {
+      console.warn("날짜 파싱 실패:", dateStr);
+      return new Date(dateStr); // 파싱 실패 시 Date 객체 반환
+    }
+    const year = match[1];
+    // 월과 일이 한자리일 경우 두자리로 맞추기
+    const month = match[2].padStart(2, '0');
+    const day = match[3].padStart(2, '0');
+    return parseInt(year + month + day, 10);
+  }
+  
+  function updateHistoryTable() {
+    // 정렬 전 디버깅 로그 출력
+    console.log("정렬 전 purchaseDate 값:", completedInvestments.map(item => `${item.purchaseDate} → ${getYMDValue(item.purchaseDate)}`));
+  
+    completedInvestments.sort((a, b) => {
+      const aValue = getYMDValue(a.purchaseDate);
+      const bValue = getYMDValue(b.purchaseDate);
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return aValue - bValue;
+      } else {
+        return new Date(a.purchaseDate) - new Date(b.purchaseDate);
+      }
+    });
+  
+    // 정렬 후 디버깅 로그 출력
+    console.log("정렬 후 purchaseDate 값:", completedInvestments.map(item => `${item.purchaseDate} → ${getYMDValue(item.purchaseDate)}`));
+  
+    const tableBody = document.querySelector('#historyTable tbody');
+    tableBody.innerHTML = '';
+  
+    completedInvestments.forEach(investment => {
+      const row = document.createElement('tr');
+  
+      const buyDate = investment.purchaseDate;
+      const sellDate = investment.sellDate;
+      const amountYen = investment.amountYen;
+      const buyRate = investment.exchangeRate;
+      const sellRate = investment.sellRate;
+      const profitLoss = investment.profitLoss;
+      const returnVal = investment.return;
+  
+      const buyDateCell = document.createElement('td');
+      buyDateCell.textContent = buyDate;
+      row.appendChild(buyDateCell);
+  
+      const sellDateCell = document.createElement('td');
+      sellDateCell.textContent = sellDate ? sellDate : '-';
+      row.appendChild(sellDateCell);
+  
+      const amountYenCell = document.createElement('td');
+      amountYenCell.textContent = amountYen;
+      row.appendChild(amountYenCell);
+  
+      const buyRateCell = document.createElement('td');
+      buyRateCell.textContent = buyRate;
+      row.appendChild(buyRateCell);
+  
+      const sellRateCell = document.createElement('td');
+      sellRateCell.textContent = sellRate ? sellRate : '-';
+      row.appendChild(sellRateCell);
+  
+      const profitLossCell = document.createElement('td');
+      profitLossCell.textContent = profitLoss ? Number(profitLoss).toLocaleString() + '원' : '0원';
+      row.appendChild(profitLossCell);
+  
+      const returnCell = document.createElement('td');
+      returnCell.textContent = (typeof returnVal !== 'undefined') ? `${returnVal}%` : '-';
+      row.appendChild(returnCell);
+  
+      tableBody.appendChild(row);
+    });
+  
+    // 최종적으로 tbody 내의 tr 순서를 로그 출력
+    console.log("DOM에 추가된 tr 순서:", Array.from(tableBody.children).map(tr => tr.firstChild.textContent));
+  } 
+  completedInvestments.sort((a, b) => {
+    const aDate = new Date(a.purchaseDate);
+    const bDate = new Date(b.purchaseDate);
+    return aDate - bDate; // Date 객체 간 뺄셈은 시간 차이를 반환
+  });
+
+  const sortedInvestments = [...completedInvestments].sort((a, b) => {
+    const aDate = new Date(a.purchaseDate);
+    const bDate = new Date(b.purchaseDate);
+    return aDate - bDate;
+  });
