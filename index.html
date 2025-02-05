@@ -125,7 +125,7 @@
         }
     </script>
 
-    <!-- 투자 목표 값 전송 스크립트 추가 -->
+    <!-- 투자 목표 값 전송 스크립트 수정 -->
     <script>
     function sendInvestmentTargets() {
         const tableBody = document.querySelector('#currentInvestmentsTable tbody');
@@ -138,7 +138,7 @@
                 const sellText = sellSpan.textContent.trim(); // 예: "매도: 102.00원"
                 const buyValue = buyText.replace(/[^0-9.]/g, '');
                 const sellValue = sellText.replace(/[^0-9.]/g, '');
-                // React Native WebView 환경에서 postMessage 호출
+                // React Native WebView 환경에서 postMessage를 통해 데이터 전달
                 if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({
                         buyTarget: buyValue,
@@ -148,8 +148,9 @@
             }
         }
     }
-    // 페이지 로드 후에 투자 목표 값 전송 (필요시 투자 데이터 업데이트 후에도 호출)
+    // 페이지 로드 후 1회 호출 및 이후 5초마다 재호출
     document.addEventListener('DOMContentLoaded', sendInvestmentTargets);
+    setInterval(sendInvestmentTargets, 5000);
     </script>
 </body>
 </html>
