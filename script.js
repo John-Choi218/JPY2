@@ -290,13 +290,28 @@ function updateTables() {
 
 // 요약 정보 업데이트
 function updateSummary() {
+    // 총 수익 (원)
     const totalProfit = completedInvestments.reduce((sum, inv) => sum + inv.profitLoss, 0);
-    const averageReturn = completedInvestments.length > 0
-        ? completedInvestments.reduce((sum, inv) => sum + inv.profitLossRate, 0) / completedInvestments.length
-        : 0;
+    // 총 투자 원화 금액 (구매 시점 기준)
+    const totalInvested = completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
+    // 전체 투자에 대한 전체 수익률 (백분율)
+    const overallReturn = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
+
+    let totalDays = 0;
+    if (completedInvestments.length > 0) {
+        // 모든 완료된 투자에서 첫 구매일과 마지막 매도일을 구합니다.
+        const firstPurchaseTime = Math.min(...completedInvestments.map(inv => new Date(inv.date).getTime()));
+        const lastSellTime = Math.max(...completedInvestments.map(inv => new Date(inv.sellDate).getTime()));
+        // 두 날짜 사이의 일수 (소수점 포함)
+        totalDays = (lastSellTime - firstPurchaseTime) / (1000 * 60 * 60 * 24);
+    }
+    
+    // 총 투자 기간(일)로 전체 수익률을 나누어 총 수익률 산출
+    const totalReturn = totalDays > 0 ? overallReturn / totalDays : overallReturn;
     
     document.getElementById('totalProfit').textContent = `${totalProfit.toLocaleString()}원`;
-    document.getElementById('averageReturn').textContent = `${averageReturn.toFixed(2)}%`;
+    // 기존 "평균 수익률"을 "총 수익률"로 표시 (HTML 요소 id: totalReturn 로 변경)
+    document.getElementById('totalReturn').textContent = `${totalReturn.toFixed(2)}%`;
 }
 
 // 설정 로드 함수
