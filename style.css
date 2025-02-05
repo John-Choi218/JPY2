@@ -467,3 +467,60 @@ body.dark-mode .exchange-rate-box {
     min-width: 50px;
     max-width: 100px;
 }
+
+/* 투자 내역 작업 버튼 스타일 */
+.table-btn {
+    font-size: 12px;           /* 작은 폰트 사이즈 */
+    padding: 4px 8px;          /* 적당한 여백 */
+    margin: 2px;               /* 버튼 간 간격 */
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+/* 수정 버튼 스타일 */
+.table-btn.edit {
+    background-color: #ffc107;  /* 노란색 계열 */
+    color: #000;
+}
+
+/* 삭제 버튼 스타일 */
+.table-btn.delete {
+    background-color: #dc3545;  /* 빨강 */
+    color: #fff;
+}
+
+/* 매도 버튼 스타일 */
+.table-btn.sell {
+    background-color: #28a745;  /* 초록 */
+    color: #fff;
+}
+
+/* 가로로 버튼을 배치하는 컨테이너 (flex 레이아웃) */
+.action-buttons {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 4px;        /* 버튼 사이의 간격 */
+    margin-top: 4px; /* 매수/매도 목표와 버튼 사이의 간격 */
+}
+
+/* 기본 테이블 스타일 */
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th, td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: center;
+}
+
+/* 만약 tbody에 flex 관련 스타일이 있다면 순서를 역전시킬 수 있습니다.
+   예를 들어, 아래와 같이 설정되어 있다면 삭제하거나 수정해야 합니다.
+
+tbody {
+  display: flex;
+  flex-direction: column-reverse;  /* 이 경우 최신 데이터가 위로 오게 됩니다. */
+/* } */
