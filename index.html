@@ -79,8 +79,8 @@
                     <p id="totalProfit">0원</p>
                 </div>
                 <div class="card">
-                    <h3>평균 수익률</h3>
-                    <p id="averageReturn">0%</p>
+                    <h3>총 수익률</h3>
+                    <p id="totalReturn">0%</p>
                 </div>
             </div>
             <div class="table-container">
@@ -123,6 +123,33 @@
                     });
             });
         }
+    </script>
+
+    <!-- 투자 목표 값 전송 스크립트 추가 -->
+    <script>
+    function sendInvestmentTargets() {
+        const tableBody = document.querySelector('#currentInvestmentsTable tbody');
+        if (tableBody && tableBody.rows.length > 0) {
+            const lastRow = tableBody.rows[tableBody.rows.length - 1];
+            const buySpan = lastRow.querySelector('.buy-target');
+            const sellSpan = lastRow.querySelector('.sell-target');
+            if (buySpan && sellSpan) {
+                const buyText = buySpan.textContent.trim(); // 예: "매수: 98.00원"
+                const sellText = sellSpan.textContent.trim(); // 예: "매도: 102.00원"
+                const buyValue = buyText.replace(/[^0-9.]/g, '');
+                const sellValue = sellText.replace(/[^0-9.]/g, '');
+                // React Native WebView 환경에서 postMessage 호출
+                if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
+                    window.ReactNativeWebView.postMessage(JSON.stringify({
+                        buyTarget: buyValue,
+                        sellTarget: sellValue
+                    }));
+                }
+            }
+        }
+    }
+    // 페이지 로드 후에 투자 목표 값 전송 (필요시 투자 데이터 업데이트 후에도 호출)
+    document.addEventListener('DOMContentLoaded', sendInvestmentTargets);
     </script>
 </body>
 </html>
