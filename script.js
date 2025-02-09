@@ -239,6 +239,9 @@ function updateTables() {
     // 현재 투자 내역을 날짜 기준 오름차순으로 정렬 (오래된 내역이 위, 최신 내역이 아래)
     currentInvestments.sort((a, b) => new Date(a.date) - new Date(b.date));
     
+    // 완료된 투자 내역을 매도일 기준 내림차순 정렬 (최신 순)
+    completedInvestments.sort((a, b) => new Date(b.sellDate) - new Date(a.sellDate));
+
     // 테이블 바디 초기화
     const tableBody = document.querySelector('#currentInvestmentsTable tbody');
     tableBody.innerHTML = '';
@@ -330,14 +333,11 @@ function updateTables() {
     // 투자 실적 테이블 업데이트
     const historyTable = document.querySelector('#historyTable tbody');
     historyTable.innerHTML = completedInvestments.map(inv => {
-        console.log('완료된 투자 ID:', inv.id); // ID 확인 로그
-        const amountYen = inv.amountYen.toLocaleString();
-        
         return `
         <tr>
             <td>${new Date(inv.date).toLocaleDateString()}</td>
             <td>${new Date(inv.sellDate).toLocaleDateString()}</td>
-            <td>${amountYen}엔</td>
+            <td>${inv.amountYen.toLocaleString()}엔</td>
             <td>${inv.exchangeRate.toFixed(2)}원</td>
             <td>${inv.sellExchangeRate.toFixed(2)}원</td>
             <td>${inv.profitLoss.toLocaleString()}원</td>
