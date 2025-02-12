@@ -323,9 +323,18 @@ function updateTables() {
         };
         buttonContainer.appendChild(sellButton);
 
+        // 추가된 공매도 버튼 생성
+        const shortSellButton = document.createElement('button');
+        shortSellButton.textContent = '공매도';
+        shortSellButton.className = 'table-btn shortsell';
+        // 공매도 버튼 클릭 시 handleShortSell 함수 호출 (해당 행, 작업 셀 전달)
+        shortSellButton.onclick = function() {
+            handleShortSell(investment.id, row, actionCell);
+        };
+        buttonContainer.appendChild(shortSellButton);
+
         // 버튼 컨테이너를 작업 셀에 추가
         actionCell.appendChild(buttonContainer);
-
         row.appendChild(actionCell);
         tableBody.appendChild(row);
     });
@@ -1110,3 +1119,34 @@ function getYMDValue(dateStr) {
     const bDate = new Date(b.purchaseDate);
     return aDate - bDate;
   });
+
+// -----------------------------------------------
+// 공매도 처리 함수 추가
+function handleShortSell(id, row, actionCell) {
+    // 판매 환율 입력 프롬프트
+    const sellRateStr = prompt('판매 환율을 입력하세요 (100엔 기준):', '');
+    if (!sellRateStr) return; // 취소 시 종료
+
+    const sellRate = Number(sellRateStr);
+    if (isNaN(sellRate) || sellRate <= 0) {
+        alert('올바른 판매 환율을 입력해주세요.');
+        return;
+    }
+    
+    // 해당 투자 내역 행 전체를 파란색으로 음영 처리
+    row.style.backgroundColor = '#cce5ff'; // 연한 파란색
+    
+    // 작업 셀 오른쪽에 "*공매도 중*" 표기 추가
+    const shortSellLabel = document.createElement('span');
+    shortSellLabel.textContent = ' *공매도 중*';
+    shortSellLabel.style.color = 'blue';
+    shortSellLabel.style.fontWeight = 'bold';
+    actionCell.appendChild(shortSellLabel);
+    
+    // 입력한 판매 환율에서 5원 차감한 목표 매수가 계산 및 표기
+    const targetBuy = sellRate - 5;
+    const targetBuyDiv = document.createElement('div');
+    targetBuyDiv.textContent = `목표 매수가 : ${targetBuy.toFixed(2)}원`;
+    targetBuyDiv.style.color = 'blue';
+    actionCell.appendChild(targetBuyDiv);
+}
