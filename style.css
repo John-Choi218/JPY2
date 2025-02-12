@@ -496,6 +496,12 @@ body.dark-mode .exchange-rate-box {
     color: #fff;
 }
 
+/* 기존 버튼 스타일 아래에 추가 */
+.table-btn.shortsell {
+    background-color: #007bff; /* 파란색 배경 */
+    color: #fff;
+}
+
 /* 가로로 버튼을 배치하는 컨테이너 (flex 레이아웃) */
 .action-buttons {
     display: flex;
