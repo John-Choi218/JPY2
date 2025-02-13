@@ -1121,7 +1121,7 @@ function getYMDValue(dateStr) {
   });
 
 // -----------------------------------------------
-// 공매도 처리 함수 추가
+// 공매도 처리 함수 수정
 function handleShortSell(id, row, actionCell) {
     // 판매 환율 입력 프롬프트
     const sellRateStr = prompt('판매 환율을 입력하세요 (100엔 기준):', '');
@@ -1149,4 +1149,15 @@ function handleShortSell(id, row, actionCell) {
     targetBuyDiv.textContent = `목표 매수가 : ${targetBuy.toFixed(2)}원`;
     targetBuyDiv.style.color = 'blue';
     actionCell.appendChild(targetBuyDiv);
+
+    // Firestore에 공매도 정보 저장
+    db.collection('currentInvestments').doc(id).update({
+        shortSell: true,
+        shortSellSellRate: sellRate,
+        shortSellTargetBuy: targetBuy,
+    }).then(() => {
+        console.log('공매도 정보가 Firestore에 저장되었습니다.');
+    }).catch(error => {
+        console.error('공매도 정보 저장 실패:', error);
+    });
 }
