@@ -18,7 +18,7 @@ const firebaseConfig = {
     appId: "1:453717733641:web:260fb49f655fef4fd663d8"
 };
 
-// Firebase 초기화
+// Firebase 초기화a
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 
@@ -100,13 +100,19 @@ document.getElementById('investmentForm').addEventListener('submit', async funct
         const editMode = this.dataset.editMode;
         
         if (editMode) {
-            // 수정 모드: 기존 문서 업데이트
-            await db.collection('currentInvestments').doc(editMode).update(investment);
-            
-            // 로컬 배열에서 해당 항목 업데이트
+            // 수정 모드: 기존 문서 업데이트 - 공매도 상태 초기화 (삭제)
+            const updateData = {
+                ...investment,
+                shortSell: false,
+                shortSellSellRate: firebase.firestore.FieldValue.delete(),
+                shortSellTargetBuy: firebase.firestore.FieldValue.delete()
+            };
+            await db.collection('currentInvestments').doc(editMode).update(updateData);
+
+            // 로컬 배열에서 해당 항목 업데이트 (공매도 상태 초기화)
             const index = currentInvestments.findIndex(inv => inv.id === editMode);
             if (index !== -1) {
-                currentInvestments[index] = { ...investment, id: editMode };
+                currentInvestments[index] = { ...investment, id: editMode, shortSell: false };
             }
             
             // 수정 모드 해제
