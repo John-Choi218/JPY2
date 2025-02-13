@@ -358,6 +358,47 @@ function updateTables() {
                 targetBuyDiv.style.color = 'blue';
                 actionCell.appendChild(targetBuyDiv);
             }
+
+            // "매수" 버튼 추가 (작게 표시)
+            const buyButton = document.createElement('button');
+            buyButton.textContent = '매수';
+            buyButton.className = 'table-btn buy';
+            // 작은 버튼을 위해 폰트 크기와 패딩 조정
+            buyButton.style.fontSize = '10px';
+            buyButton.style.padding = '2px 4px';
+            buyButton.onclick = function() {
+                const buyRateStr = prompt('매수 환율을 입력하세요 (100엔 기준):', '');
+                if (!buyRateStr) return;
+                const newBuyRate = Number(buyRateStr);
+                if (isNaN(newBuyRate) || newBuyRate <= 0) {
+                    alert('올바른 매수 환율을 입력해주세요.');
+                    return;
+                }
+                // 계산: 새 매수 환율 = 기존 매수 환율 - 공매도시 환율 + 새 매수 환율
+                const newExchangeRate = investment.exchangeRate - investment.shortSellSellRate + newBuyRate;
+                const newAmountKrw = investment.amountYen * (newExchangeRate / 100);
+                // Firestore 업데이트로 공매도 상태 해제 및 매수 정보 갱신
+                db.collection('currentInvestments').doc(investment.id).update({
+                    shortSell: false,
+                    shortSellSellRate: firebase.firestore.FieldValue.delete(),
+                    shortSellTargetBuy: firebase.firestore.FieldValue.delete(),
+                    exchangeRate: newExchangeRate,
+                    amountKrw: newAmountKrw
+                }).then(() => {
+                    alert('매수 환율이 입력되어 공매도 상태가 해제되었습니다.');
+                    const index = currentInvestments.findIndex(inv => inv.id === investment.id);
+                    if (index !== -1) {
+                        currentInvestments[index].shortSell = false;
+                        currentInvestments[index].exchangeRate = newExchangeRate;
+                        currentInvestments[index].amountKrw = newAmountKrw;
+                    }
+                    updateTables();
+                }).catch(error => {
+                    console.error('매수 환율 저장 실패:', error);
+                    alert('매수 환율 저장에 실패했습니다.');
+                });
+            };
+            actionCell.appendChild(buyButton);
         }
 
         tableBody.appendChild(row);
