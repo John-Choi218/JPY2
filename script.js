@@ -336,6 +336,24 @@ function updateTables() {
         // 버튼 컨테이너를 작업 셀에 추가
         actionCell.appendChild(buttonContainer);
         row.appendChild(actionCell);
+
+        // 공매도 상태인 경우: Firestore에 저장된 값 반영
+        if (investment.shortSell) {
+            row.style.backgroundColor = '#cce5ff';
+            const shortSellLabel = document.createElement('span');
+            shortSellLabel.textContent = ' *공매도 중*';
+            shortSellLabel.style.color = 'blue';
+            shortSellLabel.style.fontWeight = 'bold';
+            actionCell.appendChild(shortSellLabel);
+
+            if (investment.shortSellTargetBuy !== undefined) {
+                const targetBuyDiv = document.createElement('div');
+                targetBuyDiv.textContent = `목표 매수가 : ${Number(investment.shortSellTargetBuy).toFixed(2)}원`;
+                targetBuyDiv.style.color = 'blue';
+                actionCell.appendChild(targetBuyDiv);
+            }
+        }
+
         tableBody.appendChild(row);
     });
     
