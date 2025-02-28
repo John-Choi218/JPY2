@@ -14,21 +14,17 @@
     <div class="container">
         <h1>엔화 투자 장부</h1>
         
-        <!-- 현재 환율 표시 섹션 추가 -->
+        <!-- 현재 환율 표시 섹션 -->
         <div class="current-rate exchange-rate-box">
             <h3>현재 환율 (100엔)</h3>
             <p id="currentRate">로딩중...</p>
         </div>
         
-        <!-- 설정 버튼 추가 -->
+        <!-- 설정 버튼 -->
         <div class="header-actions">
-            <button id="openSettings" class="settings-button">
-                ⚙️ 설정
-            </button>
+            <button id="openSettings" class="settings-button">⚙️ 설정</button>
             <button id="dark-mode-btn" class="header-btn">다크 모드</button>
-            <button id="refreshToken" class="settings-button" onclick="refreshFCMToken()">
-                🔄 새로고침
-            </button>
+            <button id="refreshToken" class="settings-button" onclick="refreshFCMToken()">🔄 새로고침</button>
         </div>
         
         <!-- 투자 입력 폼 -->
@@ -73,14 +69,23 @@
         <!-- 투자 실적 -->
         <div class="investment-history">
             <h2>투자 실적</h2>
-            <div class="summary-cards">
+            <div class="summary-cards" id="summary">
                 <div class="card">
                     <h3>총 수익</h3>
                     <p id="totalProfit">0원</p>
                 </div>
                 <div class="card">
                     <h3>총 수익률</h3>
-                    <p id="totalReturn">0%</p>
+                    <p>
+                        <span id="totalReturn">0%</span>
+                        <label for="initialCapital">투자 원금:</label>
+                        <input type="number" id="initialCapital" placeholder="원" step="1000" min="0" style="width: 100px;">
+                        <label for="startDate">시작:</label>
+                        <input type="date" id="startDate" style="width: 120px;">
+                        <label for="endDate">종료:</label>
+                        <input type="date" id="endDate" style="width: 120px;">
+                        <span id="adjustedReturn">조정 수익률: 0%</span>
+                    </p>
                 </div>
             </div>
             <div class="table-container">
@@ -125,7 +130,7 @@
         }
     </script>
 
-    <!-- 투자 목표 값 전송 스크립트 수정 -->
+    <!-- 투자 목표 값 전송 스크립트 -->
     <script>
     function sendInvestmentTargets() {
         const tableBody = document.querySelector('#currentInvestmentsTable tbody');
@@ -134,11 +139,10 @@
             const buySpan = lastRow.querySelector('.buy-target');
             const sellSpan = lastRow.querySelector('.sell-target');
             if (buySpan && sellSpan) {
-                const buyText = buySpan.textContent.trim(); // 예: "매수: 98.00원"
-                const sellText = sellSpan.textContent.trim(); // 예: "매도: 102.00원"
+                const buyText = buySpan.textContent.trim();
+                const sellText = sellSpan.textContent.trim();
                 const buyValue = buyText.replace(/[^0-9.]/g, '');
                 const sellValue = sellText.replace(/[^0-9.]/g, '');
-                // React Native WebView 환경에서 postMessage를 통해 데이터 전달
                 if (window.ReactNativeWebView && window.ReactNativeWebView.postMessage) {
                     window.ReactNativeWebView.postMessage(JSON.stringify({
                         buyTarget: buyValue,
@@ -148,7 +152,6 @@
             }
         }
     }
-    // 페이지 로드 후 1회 호출 및 이후 5초마다 재호출
     document.addEventListener('DOMContentLoaded', sendInvestmentTargets);
     setInterval(sendInvestmentTargets, 5000);
     </script>
