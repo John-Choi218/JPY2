@@ -6,11 +6,12 @@
 
 body {
     font-family: 'Noto Sans KR', sans-serif;
-    line-height: 1.6;
+    line-height: 1.4;
     background-color: #ffffff;
     color: #000000;
     -webkit-text-size-adjust: 100%;
     transition: background-color 0.3s ease, color 0.3s ease;
+    font-size: 14px;
 }
 
 body.dark-mode {
@@ -20,60 +21,60 @@ body.dark-mode {
 
 .container {
     width: 100%;
-    max-width: 100%;
+    max-width: 393px;
     margin: 0 auto;
     padding: 10px;
 }
 
 h1 {
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
     color: #333;
-    font-size: 1.5rem;
+    font-size: 1.3rem;
 }
 
 h2 {
-    margin-bottom: 15px;
+    margin-bottom: 10px;
     color: #444;
-    font-size: 1.2rem;
+    font-size: 1.1rem;
 }
 
 .input-section {
     background-color: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 20px;
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 15px;
 }
 
 .form-group {
-    margin-bottom: 12px;
+    margin-bottom: 8px;
 }
 
 label {
     display: block;
-    margin-bottom: 5px;
+    margin-bottom: 4px;
     color: #666;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
 }
 
 input {
     width: 100%;
-    padding: 10px;
+    padding: 8px;
     border: 1px solid #ddd;
     border-radius: 4px;
-    font-size: 16px;
+    font-size: 0.9rem;
 }
 
 button {
     width: 100%;
     background-color: #4CAF50;
     color: white;
-    padding: 12px;
+    padding: 10px;
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    font-size: 1rem;
+    font-size: 0.9rem;
     margin-bottom: 5px;
 }
 
@@ -85,7 +86,7 @@ button:hover {
     width: 100%;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 table {
@@ -93,78 +94,87 @@ table {
     min-width: 360px;
     border-collapse: collapse;
     background-color: white;
-    margin-bottom: 20px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 th, td {
     padding: 6px 4px;
-    text-align: left;
+    text-align: center;
     border-bottom: 1px solid #ddd;
-    font-size: 0.85rem;
+    border-right: 1px solid #ddd; /* 세로줄 추가 */
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+th:last-child, td:last-child {
+    border-right: none; /* 마지막 열에는 세로줄 제거 */
 }
 
 th {
     background-color: #f8f9fa;
     font-weight: 600;
-    white-space: nowrap;
 }
 
 .summary-cards {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
+    display: flex;
+    flex-direction: column;
     gap: 10px;
-    margin-bottom: 20px;
+    margin-bottom: 15px;
 }
 
 .card {
     background-color: white;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 .card h3 {
     color: #666;
-    margin-bottom: 8px;
-    font-size: 0.9rem;
+    margin-bottom: 6px;
+    font-size: 0.85rem;
 }
 
 .card p {
-    font-size: 1.2rem;
+    font-size: 1rem;
     font-weight: 600;
     color: #333;
     display: flex;
-    align-items: center;
     flex-wrap: wrap;
     gap: 5px;
+    align-items: center;
 }
 
 .card input {
-    margin-left: 5px;
-    padding: 5px;
+    padding: 4px;
     border: 1px solid #ccc;
     border-radius: 4px;
-    width: auto;
+    font-size: 0.8rem;
+    width: 80px;
+    text-align: right; /* 숫자 오른쪽 정렬 */
+}
+
+.card input#initialCapital {
+    width: 100px; /* 원금 입력 칸 약간 넓게 */
 }
 
 .card label {
-    margin-left: 10px;
-    margin-right: 5px;
+    margin-right: 4px;
+    font-size: 0.8rem;
 }
 
 .button-group {
     display: flex;
-    gap: 3px;
-    justify-content: flex-start;
+    gap: 2px;
+    justify-content: center;
+    flex-wrap: nowrap; /* 가로 배치 유지 */
 }
 
 .edit-button, .delete-button, .sell-button {
     width: auto;
     padding: 4px 6px;
-    font-size: 0.75rem;
-    margin: 0;
-    white-space: nowrap;
+    font-size: 0.7rem;
+    margin: 2px;
 }
 
 .edit-button {
@@ -177,132 +187,60 @@ th {
 
 #cancelEdit {
     background-color: #6c757d;
-    margin-top: 10px;
-}
-
-@media screen and (max-width: 768px) {
-    .table-container {
-        margin-left: -10px;
-        margin-right: -10px;
-        padding: 0 10px;
-    }
-    
-    .button-group {
-        display: flex;
-        flex-direction: row;
-        gap: 2px;
-    }
-    
-    .edit-button, .delete-button, .sell-button {
-        flex: 1;
-        padding: 4px 6px;
-        font-size: 0.7rem;
-        margin: 0;
-        min-width: 40px;
-    }
-    
-    th, td {
-        padding: 4px 3px;
-        font-size: 0.8rem;
-    }
-    
-    .summary-cards {
-        grid-template-columns: 1fr;
-    }
-    
-    .card p {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-}
-
-.target-rates {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 4px;
-    font-size: 0.75rem;
+    margin-top: 8px;
 }
 
 .buy-target {
     color: #2196F3;
+    font-size: 0.75rem;
 }
 
 .sell-target {
     color: #F44336;
+    font-size: 0.75rem;
 }
 
 .header-actions {
     display: flex;
     justify-content: space-between;
     flex-wrap: wrap;
-    margin-bottom: 15px;
+    gap: 5px;
+    margin-bottom: 10px;
 }
 
-.settings-button {
+.settings-button, .header-btn {
     width: auto;
-    padding: 8px 15px;
-    font-size: 0.9rem;
+    padding: 6px 12px;
+    font-size: 0.8rem;
     background-color: #6c757d;
-    margin: 0;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
 }
 
-.settings-button:hover {
+.settings-button:hover, .header-btn:hover {
     background-color: #5a6268;
 }
 
-.settings-form {
-    padding: 10px;
-}
-
-.settings-form .form-group {
-    margin-bottom: 15px;
-    text-align: left;
-}
-
-.settings-form label {
-    display: block;
-    margin-bottom: 5px;
-    color: #666;
-    font-size: 0.9rem;
-}
-
-.settings-form .swal2-input {
-    width: 100%;
-    margin: 5px 0;
-}
-
-@media screen and (max-width: 768px) {
-    .settings-button {
-        padding: 6px 12px;
-        font-size: 0.8rem;
-    }
-    
-    .settings-form label {
-        font-size: 0.85rem;
-    }
-}
-
 .current-rate {
-    position: fixed;
-    top: 20px;
-    right: 20px;
     background-color: #f8f9fa;
-    padding: 15px;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 10px;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     text-align: center;
-    transition: background-color 0.3s ease, color 0.3s ease;
+    margin-bottom: 10px;
 }
 
 .current-rate h3 {
     margin: 0;
-    font-size: 0.9rem;
+    font-size: 0.85rem;
     color: #666;
 }
 
 .current-rate p {
-    margin: 5px 0 0 0;
-    font-size: 1.2rem;
+    margin: 4px 0 0;
+    font-size: 1rem;
     font-weight: bold;
     color: #333;
 }
@@ -310,20 +248,17 @@ th {
 body.dark-mode .current-rate {
     background-color: #2c2c2c;
     color: #ffffff;
-    box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+    box-shadow: 0 1px 3px rgba(255,255,255,0.1);
 }
 
-body.dark-mode .current-rate h3 {
-    color: #ffffff;
-}
-
+body.dark-mode .current-rate h3, 
 body.dark-mode .current-rate p {
     color: #ffffff;
 }
 
 body.dark-mode .input-section {
     background-color: #1e1e1e;
-    box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+    box-shadow: 0 1px 3px rgba(255,255,255,0.1);
 }
 
 body.dark-mode .input-section label {
@@ -352,24 +287,12 @@ body.dark-mode td {
 
 body.dark-mode .card {
     background-color: #1e1e1e;
-    box-shadow: 0 2px 4px rgba(255,255,255,0.1);
+    box-shadow: 0 1px 3px rgba(255,255,255,0.1);
 }
 
-body.dark-mode .card h3 {
-    color: #ffffff;
-}
-
+body.dark-mode .card h3, 
 body.dark-mode .card p {
     color: #ffffff;
-}
-
-body.dark-mode .settings-button {
-    background-color: #6c757d;
-    color: #ffffff;
-}
-
-body.dark-mode .settings-button:hover {
-    background-color: #5a6268;
 }
 
 body.dark-mode .card input {
@@ -378,61 +301,9 @@ body.dark-mode .card input {
     border-color: #555;
 }
 
-@media screen and (max-width: 768px) {
-    .current-rate {
-        position: static;
-        margin-bottom: 20px;
-    }
-}
-
-.header-btn {
-    margin-left: 10px;
-    padding: 5px 10px;
-    font-size: 14px;
-    background-color: #6c757d;
-    color: #ffffff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.3s;
-    width: 80px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.header-btn:hover {
-    background-color: #5a6268;
-}
-
-.exchange-rate-box {
-    background-color: #ffffff;
-    color: #000000;
-    border: 1px solid #ddd;
-    padding: 15px;
-    margin: 10px 0;
-    border-radius: 4px;
-    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
-body.dark-mode .exchange-rate-box {
-    background-color: #2c2c2c !important;
-    color: #ffffff !important;
-    border-color: #444 !important;
-}
-
-.header-actions button {
-    flex: 1;
-    margin: 0 2px;
-    padding: 6px;
-    font-size: 14px;
-    min-width: 50px;
-    max-width: 100px;
-}
-
 .table-btn {
-    font-size: 12px;
-    padding: 4px 8px;
+    font-size: 0.7rem;
+    padding: 4px 6px;
     margin: 2px;
     border: none;
     border-radius: 4px;
@@ -461,8 +332,51 @@ body.dark-mode .exchange-rate-box {
 
 .action-buttons {
     display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 4px;
+    flex-wrap: nowrap; /* 가로 배치 유지 */
+    justify-content: center;
+    gap: 2px;
     margin-top: 4px;
 }
+
+/* 모바일 최적화 */
+@media screen and (max-width: 393px) {
+    .container {
+        padding: 5px;
+    }
+    
+    h1 {
+        font-size: 1.2rem;
+    }
+    
+    h2 {
+        font-size: 1rem;
+    }
+    
+    .input-section {
+        padding: 8px;
+    }
+    
+    input {
+        padding: 6px;
+        font-size: 0.85rem;
+    }
+    
+    button {
+        padding: 8px;
+        font-size: 0.85rem;
+    }
+    
+    th, td {
+        padding: 4px 2px;
+        font-size: 0.75rem;
+    }
+    
+    .card p {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 4px;
+    }
+    
+    .card input#initialCapital {
+        width: 90px; /* 모바일에서 약간 조정 */
+}}
