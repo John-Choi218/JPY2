@@ -6,9 +6,9 @@ let completedInvestments = [];
 let settings = {
     buyThreshold: 2,
     sellThreshold: 2,
-    initialCapital: null, // Firestore에 저장될 투자 원금
-    startDate: null,      // Firestore에 저장될 시작 날짜
-    endDate: null         // Firestore에 저장될 종료 날짜
+    initialCapital: null,
+    startDate: null,
+    endDate: null
 };
 
 // Firebase 초기화
@@ -39,7 +39,7 @@ async function loadData() {
             id: doc.id
         }));
 
-        await loadSettings(); // 설정 로드 추가
+        await loadSettings();
         updateTables();
         updateSummary();
     } catch (error) {
@@ -217,19 +217,19 @@ function updateTables() {
     currentInvestments.forEach(investment => {
         const row = document.createElement('tr');
         const dateCell = document.createElement('td');
-        dateCell.textContent = new Date(investment.date).toLocaleDateString();
+        dateCell.textContent = new Date(investment.date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
         row.appendChild(dateCell);
 
         const amountCell = document.createElement('td');
-        amountCell.textContent = investment.amountYen;
+        amountCell.textContent = investment.amountYen.toLocaleString();
         row.appendChild(amountCell);
 
         const exchangeRateCell = document.createElement('td');
-        exchangeRateCell.textContent = investment.exchangeRate;
+        exchangeRateCell.textContent = investment.exchangeRate.toFixed(2);
         row.appendChild(exchangeRateCell);
 
         const amountKrwCell = document.createElement('td');
-        amountKrwCell.textContent = investment.amountKrw.toLocaleString() + '원';
+        amountKrwCell.textContent = investment.amountKrw.toLocaleString();
         row.appendChild(amountKrwCell);
 
         const actionCell = document.createElement('td');
@@ -238,13 +238,13 @@ function updateTables() {
 
         const buySpan = document.createElement('span');
         buySpan.className = 'buy-target';
-        buySpan.textContent = `매수: ${buyTargetVal.toFixed(2)}원`;
+        buySpan.textContent = `다음 매수가: ${buyTargetVal.toFixed(2)}`; // "다음 매수가"로 변경
         actionCell.appendChild(buySpan);
         actionCell.appendChild(document.createElement('br'));
 
         const sellSpan = document.createElement('span');
         sellSpan.className = 'sell-target';
-        sellSpan.textContent = `매도: ${sellTargetVal.toFixed(2)}원`;
+        sellSpan.textContent = `목표 매도가: ${sellTargetVal.toFixed(2)}`; // "목표 매도가"로 변경
         actionCell.appendChild(sellSpan);
 
         const buttonContainer = document.createElement('div');
@@ -280,14 +280,14 @@ function updateTables() {
         if (investment.shortSell) {
             row.style.backgroundColor = '#cce5ff';
             const shortSellLabel = document.createElement('span');
-            shortSellLabel.textContent = ' *공매도 중*';
+            shortSellLabel.textContent = ' *공매도 중*'; // "*공매도 중*"으로 변경
             shortSellLabel.style.color = 'blue';
             shortSellLabel.style.fontWeight = 'bold';
             actionCell.appendChild(shortSellLabel);
 
             if (investment.shortSellTargetBuy !== undefined) {
                 const targetBuyDiv = document.createElement('div');
-                targetBuyDiv.textContent = `목표 매수가: ${Number(investment.shortSellTargetBuy).toFixed(2)}원`;
+                targetBuyDiv.textContent = `다음 매수가: ${Number(investment.shortSellTargetBuy).toFixed(2)}`; // 공매도 시 "다음 매수가"로 변경
                 targetBuyDiv.style.color = 'blue';
                 actionCell.appendChild(targetBuyDiv);
             }
@@ -295,7 +295,7 @@ function updateTables() {
             const buyButton = document.createElement('button');
             buyButton.textContent = '매수';
             buyButton.className = 'table-btn buy';
-            buyButton.style.fontSize = '10px';
+            buyButton.style.fontSize = '0.6rem';
             buyButton.style.padding = '2px 4px';
             buyButton.onclick = function() {
                 const buyRateStr = prompt('매수 환율을 입력하세요 (100엔 기준):', '');
@@ -336,13 +336,13 @@ function updateTables() {
     historyTable.innerHTML = completedInvestments.map(inv => {
         return `
         <tr>
-            <td>${new Date(inv.date).toLocaleDateString()}</td>
-            <td>${new Date(inv.sellDate).toLocaleDateString()}</td>
-            <td>${inv.amountYen.toLocaleString()}엔</td>
-            <td>${inv.exchangeRate.toFixed(2)}원</td>
-            <td>${inv.sellExchangeRate.toFixed(2)}원</td>
-            <td>${inv.profitLoss.toLocaleString()}원</td>
-            <td>${inv.profitLossRate.toFixed(2)}%</td>
+            <td>${new Date(inv.date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</td>
+            <td>${new Date(inv.sellDate).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</td>
+            <td>${inv.amountYen.toLocaleString()}</td>
+            <td>${inv.exchangeRate.toFixed(2)}</td>
+            <td>${inv.sellExchangeRate.toFixed(2)}</td>
+            <td>${inv.profitLoss.toLocaleString()}</td>
+            <td>${inv.profitLossRate.toFixed(1)}%</td>
             <td>
                 <div class="button-group">
                     <button class="edit-button" onclick="editCompletedInvestment('${inv.id}')">수정</button>
@@ -360,6 +360,7 @@ async function updateSummary() {
             document.getElementById('totalProfit').textContent = '0원';
             document.getElementById('totalReturn').textContent = '0%';
             document.getElementById('adjustedReturn').textContent = '연 조정 수익률: 0%';
+            document.getElementById('initialCapital').value = '0'; // 초기값 설정
             return;
         }
 
@@ -380,14 +381,15 @@ async function updateSummary() {
         const startDateInput = document.getElementById('startDate');
         const endDateInput = document.getElementById('endDate');
 
-        // Firestore에서 저장된 값 반영 (입력값이 없으면 Firestore 값 사용)
-        const initialCapital = Number(initialCapitalInput.value) || settings.initialCapital || totalInvested;
+        // 입력값에서 콤마와 "원" 제거 후 숫자 추출
+        const initialCapitalValue = initialCapitalInput.value.replace(/[^0-9]/g, '');
+        const initialCapital = Number(initialCapitalValue) || settings.initialCapital || totalInvested;
         const startDate = startDateInput.value ? new Date(startDateInput.value) : (settings.startDate ? new Date(settings.startDate) : new Date(firstPurchaseTime));
         const endDate = endDateInput.value ? new Date(endDateInput.value) : (settings.endDate ? new Date(settings.endDate) : new Date(lastSellTime));
         
         const investmentPeriodDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
         const adjustedPeriodDays = investmentPeriodDays > 0 ? investmentPeriodDays : totalDays || 1;
-        const adjustedPeriodYears = adjustedPeriodDays / 365; // 일수를 연으로 환산
+        const adjustedPeriodYears = adjustedPeriodDays / 365;
 
         const adjustedReturn = initialCapital > 0 && adjustedPeriodYears > 0 
             ? (totalProfit / initialCapital) * 100 / adjustedPeriodYears 
@@ -395,12 +397,23 @@ async function updateSummary() {
 
         document.getElementById('adjustedReturn').textContent = `연 조정 수익률: ${adjustedReturn.toFixed(2)}%`;
 
-        // 입력값이 변경되면 Firestore에 저장
+        // 원금 입력 이벤트 (콤마와 "원" 추가)
         initialCapitalInput.oninput = async () => {
-            settings.initialCapital = Number(initialCapitalInput.value) || null;
+            let value = initialCapitalInput.value.replace(/[^0-9]/g, ''); // 숫자만 남김
+            if (value) {
+                value = Number(value).toLocaleString('ko-KR') + '원'; // 콤마와 "원" 추가
+            }
+            initialCapitalInput.value = value;
+            settings.initialCapital = Number(value.replace(/[^0-9]/g, '')) || null;
             await saveSettings();
             updateSummary();
         };
+
+        // 페이지 로드 시 초기값 설정
+        if (!initialCapitalInput.value && initialCapital) {
+            initialCapitalInput.value = initialCapital.toLocaleString('ko-KR') + '원';
+        }
+
         startDateInput.onchange = async () => {
             settings.startDate = startDateInput.value || null;
             await saveSettings();
@@ -426,8 +439,10 @@ async function loadSettings() {
         const doc = await db.collection('settings').doc('thresholds').get();
         if (doc.exists) {
             settings = doc.data();
-            // UI에 반영
-            if (settings.initialCapital) document.getElementById('initialCapital').value = settings.initialCapital;
+            const initialCapitalInput = document.getElementById('initialCapital');
+            if (settings.initialCapital) {
+                initialCapitalInput.value = settings.initialCapital.toLocaleString('ko-KR') + '원'; // 로드 시 콤마와 "원" 추가
+            }
             if (settings.startDate) document.getElementById('startDate').value = settings.startDate;
             if (settings.endDate) document.getElementById('endDate').value = settings.endDate;
         } else {
@@ -541,19 +556,19 @@ async function editCompletedInvestment(id) {
     
     const form = document.createElement('form');
     form.innerHTML = `
-        <div style="margin: 10px 0;">
+        <div style="margin: 8px 0;">
             <label>구매일:<br><input type="date" id="editPurchaseDate" value="${purchaseDate}" required></label>
         </div>
-        <div style="margin: 10px 0;">
+        <div style="margin: 8px 0;">
             <label>매도일:<br><input type="date" id="editSellDate" value="${sellDate}" required></label>
         </div>
-        <div style="margin: 10px 0;">
+        <div style="margin: 8px 0;">
             <label>엔화 금액:<br><input type="number" id="editAmountYen" value="${investment.amountYen}" required></label>
         </div>
-        <div style="margin: 10px 0;">
+        <div style="margin: 8px 0;">
             <label>구매 환율 (100엔):<br><input type="number" step="0.01" id="editExchangeRate" value="${investment.exchangeRate}" required></label>
         </div>
-        <div style="margin: 10px 0;">
+        <div style="margin: 8px 0;">
             <label>매도 환율 (100엔):<br><input type="number" step="0.01" id="editSellExchangeRate" value="${investment.sellExchangeRate}" required></label>
         </div>
     `;
@@ -614,7 +629,7 @@ async function editCompletedInvestment(id) {
         Swal.fire({
             icon: 'success',
             title: '수정 완료',
-            text: '투자 실적이 성공적으로 수정되었습니다.'
+            text: '투자 실적이 수정되었습니다.'
         });
     } catch (error) {
         console.error('투자 실적 수정 실패:', error);
@@ -667,7 +682,7 @@ async function updateCurrentRate() {
         const rate = await fetchExchangeRate();
         if (rate) {
             const now = new Date();
-            document.getElementById('currentRate').textContent = `${rate}원 (${now.toLocaleTimeString()})`;
+            document.getElementById('currentRate').textContent = `${rate}원 (${now.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' })})`; 
             await checkAndSendNotifications(parseFloat(rate));
         }
     } catch (error) {
@@ -700,7 +715,7 @@ async function checkAndSendNotifications(currentRate) {
         try {
             await sendPushNotification(
                 '매수 기회!',
-                `현재 환율(${currentRate}원)이 최소 매수 목표 금액(${minBuyTarget.toFixed(2)}원)보다 2원 이상 낮습니다.`,
+                `현재 환율(${currentRate}원)이 최소 매수 목표(${minBuyTarget.toFixed(2)}원)보다 2원 이상 낮습니다.`,
                 { type: 'buy_opportunity' }
             );
         } catch (error) {
@@ -714,18 +729,18 @@ function initializeDarkMode() {
     const darkModeBtn = document.getElementById('dark-mode-btn');
     if (localStorage.getItem('darkMode') === 'enabled') {
         document.body.classList.add('dark-mode');
-        darkModeBtn.textContent = '라이트 모드';
+        darkModeBtn.textContent = '라이트';
     } else {
-        darkModeBtn.textContent = '다크 모드';
+        darkModeBtn.textContent = '다크';
     }
 
     darkModeBtn.addEventListener('click', function () {
         document.body.classList.toggle('dark-mode');
         if (document.body.classList.contains('dark-mode')) {
-            darkModeBtn.textContent = '라이트 모드';
+            darkModeBtn.textContent = '라이트';
             localStorage.setItem('darkMode', 'enabled');
         } else {
-            darkModeBtn.textContent = '다크 모드';
+            darkModeBtn.textContent = '다크';
             localStorage.setItem('darkMode', 'disabled');
         }
     });
@@ -739,7 +754,7 @@ async function requestNotificationPermission() {
     }
 }
 
-// 푸시 알림 전송 (간소화된 버전)
+// 푸시 알림 전송
 async function sendPushNotification(title, body, data = {}) {
     try {
         const registration = await navigator.serviceWorker.getRegistration();
@@ -775,14 +790,14 @@ function handleShortSell(id, row, actionCell) {
     
     row.style.backgroundColor = '#cce5ff';
     const shortSellLabel = document.createElement('span');
-    shortSellLabel.textContent = ' *공매도 중*';
+    shortSellLabel.textContent = ' *공매도 중*'; // "*공매도 중*"으로 변경
     shortSellLabel.style.color = 'blue';
     shortSellLabel.style.fontWeight = 'bold';
     actionCell.appendChild(shortSellLabel);
     
     const targetBuy = sellRate - 5;
     const targetBuyDiv = document.createElement('div');
-    targetBuyDiv.textContent = `목표 매수가: ${targetBuy.toFixed(2)}원`;
+    targetBuyDiv.textContent = `다음 매수가: ${targetBuy.toFixed(2)}`; // 공매도 시 "다음 매수가"로 변경
     targetBuyDiv.style.color = 'blue';
     actionCell.appendChild(targetBuyDiv);
 
