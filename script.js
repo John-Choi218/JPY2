@@ -238,13 +238,13 @@ function updateTables() {
 
         const buySpan = document.createElement('span');
         buySpan.className = 'buy-target';
-        buySpan.textContent = `다음 매수가: ${buyTargetVal.toFixed(2)}`; // "다음 매수가"로 변경
+        buySpan.textContent = `다음 매수가: ${buyTargetVal.toFixed(2)}`;
         actionCell.appendChild(buySpan);
         actionCell.appendChild(document.createElement('br'));
 
         const sellSpan = document.createElement('span');
         sellSpan.className = 'sell-target';
-        sellSpan.textContent = `목표 매도가: ${sellTargetVal.toFixed(2)}`; // "목표 매도가"로 변경
+        sellSpan.textContent = `목표 매도가: ${sellTargetVal.toFixed(2)}`;
         actionCell.appendChild(sellSpan);
 
         const buttonContainer = document.createElement('div');
@@ -280,14 +280,14 @@ function updateTables() {
         if (investment.shortSell) {
             row.style.backgroundColor = '#cce5ff';
             const shortSellLabel = document.createElement('span');
-            shortSellLabel.textContent = ' *공매도 중*'; // "*공매도 중*"으로 변경
+            shortSellLabel.textContent = ' *공매도 중*';
             shortSellLabel.style.color = 'blue';
             shortSellLabel.style.fontWeight = 'bold';
             actionCell.appendChild(shortSellLabel);
 
             if (investment.shortSellTargetBuy !== undefined) {
                 const targetBuyDiv = document.createElement('div');
-                targetBuyDiv.textContent = `다음 매수가: ${Number(investment.shortSellTargetBuy).toFixed(2)}`; // 공매도 시 "다음 매수가"로 변경
+                targetBuyDiv.textContent = `다음 매수가: ${Number(investment.shortSellTargetBuy).toFixed(2)}`;
                 targetBuyDiv.style.color = 'blue';
                 actionCell.appendChild(targetBuyDiv);
             }
@@ -360,7 +360,7 @@ async function updateSummary() {
             document.getElementById('totalProfit').textContent = '0원';
             document.getElementById('totalReturn').textContent = '0%';
             document.getElementById('adjustedReturn').textContent = '연 조정 수익률: 0%';
-            document.getElementById('initialCapital').value = '0'; // 초기값 설정
+            document.getElementById('initialCapital').value = '0';
             return;
         }
 
@@ -381,7 +381,6 @@ async function updateSummary() {
         const startDateInput = document.getElementById('startDate');
         const endDateInput = document.getElementById('endDate');
 
-        // 입력값에서 콤마와 "원" 제거 후 숫자 추출
         const initialCapitalValue = initialCapitalInput.value.replace(/[^0-9]/g, '');
         const initialCapital = Number(initialCapitalValue) || settings.initialCapital || totalInvested;
         const startDate = startDateInput.value ? new Date(startDateInput.value) : (settings.startDate ? new Date(settings.startDate) : new Date(firstPurchaseTime));
@@ -397,11 +396,10 @@ async function updateSummary() {
 
         document.getElementById('adjustedReturn').textContent = `연 조정 수익률: ${adjustedReturn.toFixed(2)}%`;
 
-        // 원금 입력 이벤트 (콤마와 "원" 추가)
         initialCapitalInput.oninput = async () => {
-            let value = initialCapitalInput.value.replace(/[^0-9]/g, ''); // 숫자만 남김
+            let value = initialCapitalInput.value.replace(/[^0-9]/g, '');
             if (value) {
-                value = Number(value).toLocaleString('ko-KR') + '원'; // 콤마와 "원" 추가
+                value = Number(value).toLocaleString('ko-KR') + '원';
             }
             initialCapitalInput.value = value;
             settings.initialCapital = Number(value.replace(/[^0-9]/g, '')) || null;
@@ -409,7 +407,6 @@ async function updateSummary() {
             updateSummary();
         };
 
-        // 페이지 로드 시 초기값 설정
         if (!initialCapitalInput.value && initialCapital) {
             initialCapitalInput.value = initialCapital.toLocaleString('ko-KR') + '원';
         }
@@ -441,7 +438,7 @@ async function loadSettings() {
             settings = doc.data();
             const initialCapitalInput = document.getElementById('initialCapital');
             if (settings.initialCapital) {
-                initialCapitalInput.value = settings.initialCapital.toLocaleString('ko-KR') + '원'; // 로드 시 콤마와 "원" 추가
+                initialCapitalInput.value = settings.initialCapital.toLocaleString('ko-KR') + '원';
             }
             if (settings.startDate) document.getElementById('startDate').value = settings.startDate;
             if (settings.endDate) document.getElementById('endDate').value = settings.endDate;
@@ -790,14 +787,14 @@ function handleShortSell(id, row, actionCell) {
     
     row.style.backgroundColor = '#cce5ff';
     const shortSellLabel = document.createElement('span');
-    shortSellLabel.textContent = ' *공매도 중*'; // "*공매도 중*"으로 변경
+    shortSellLabel.textContent = ' *공매도 중*';
     shortSellLabel.style.color = 'blue';
     shortSellLabel.style.fontWeight = 'bold';
     actionCell.appendChild(shortSellLabel);
     
     const targetBuy = sellRate - 5;
     const targetBuyDiv = document.createElement('div');
-    targetBuyDiv.textContent = `다음 매수가: ${targetBuy.toFixed(2)}`; // 공매도 시 "다음 매수가"로 변경
+    targetBuyDiv.textContent = `다음 매수가: ${targetBuy.toFixed(2)}`;
     targetBuyDiv.style.color = 'blue';
     actionCell.appendChild(targetBuyDiv);
 
