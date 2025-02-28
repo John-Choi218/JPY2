@@ -279,6 +279,7 @@ function updateTables() {
 
         if (investment.shortSell) {
             row.style.backgroundColor = '#cce5ff';
+            row.classList.add('short-sell'); // 클래스 추가
             const shortSellLabel = document.createElement('span');
             shortSellLabel.textContent = ' *공매도 중*';
             shortSellLabel.style.color = 'blue';
@@ -726,18 +727,18 @@ function initializeDarkMode() {
     const darkModeBtn = document.getElementById('dark-mode-btn');
     if (localStorage.getItem('darkMode') === 'enabled') {
         document.body.classList.add('dark-mode');
-        darkModeBtn.textContent = '라이트';
+        darkModeBtn.textContent = '라이트 모드';
     } else {
-        darkModeBtn.textContent = '다크';
+        darkModeBtn.textContent = '다크 모드';
     }
 
     darkModeBtn.addEventListener('click', function () {
         document.body.classList.toggle('dark-mode');
         if (document.body.classList.contains('dark-mode')) {
-            darkModeBtn.textContent = '라이트';
+            darkModeBtn.textContent = '라이트 모드';
             localStorage.setItem('darkMode', 'enabled');
         } else {
-            darkModeBtn.textContent = '다크';
+            darkModeBtn.textContent = '다크 모드';
             localStorage.setItem('darkMode', 'disabled');
         }
     });
@@ -786,6 +787,7 @@ function handleShortSell(id, row, actionCell) {
     }
     
     row.style.backgroundColor = '#cce5ff';
+    row.classList.add('short-sell'); // 클래스 추가
     const shortSellLabel = document.createElement('span');
     shortSellLabel.textContent = ' *공매도 중*';
     shortSellLabel.style.color = 'blue';
