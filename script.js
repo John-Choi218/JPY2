@@ -279,7 +279,7 @@ function updateTables() {
 
         if (investment.shortSell) {
             row.style.backgroundColor = '#cce5ff';
-            row.classList.add('short-sell'); // 클래스 추가
+            row.classList.add('short-sell');
             const shortSellLabel = document.createElement('span');
             shortSellLabel.textContent = ' *공매도 중*';
             shortSellLabel.style.color = 'blue';
@@ -365,38 +365,50 @@ async function updateSummary() {
             return;
         }
 
-        const totalProfit = completedInvestments.reduce((sum, inv) => sum + inv.profitLoss, 0);
-        const totalInvested = completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
-        const overallReturn = totalInvested > 0 ? (totalProfit / totalInvested) * 100 : 0;
-
-        const firstPurchaseTime = Math.min(...completedInvestments.map(inv => new Date(inv.date).getTime()));
-        const lastSellTime = Math.max(...completedInvestments.map(inv => new Date(inv.sellDate).getTime()));
-        const totalDays = (lastSellTime - firstPurchaseTime) / (1000 * 60 * 60 * 24);
-
-        const totalReturn = totalDays > 0 ? overallReturn / totalDays : overallReturn;
-
-        document.getElementById('totalProfit').textContent = `${totalProfit.toLocaleString()}원`;
-        document.getElementById('totalReturn').textContent = `${totalReturn.toFixed(2)}%`;
-
         const initialCapitalInput = document.getElementById('initialCapital');
         const startDateInput = document.getElementById('startDate');
         const endDateInput = document.getElementById('endDate');
 
+        // 투자 원금
         const initialCapitalValue = initialCapitalInput.value.replace(/[^0-9]/g, '');
-        const initialCapital = Number(initialCapitalValue) || settings.initialCapital || totalInvested;
+        const initialCapital = Number(initialCapitalValue) || settings.initialCapital || completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
+
+        // 기간 설정 (기본값은 데이터 전체 범위)
+        const firstPurchaseTime = Math.min(...completedInvestments.map(inv => new Date(inv.date).getTime()));
+        const lastSellTime = Math.max(...completedInvestments.map(inv => new Date(inv.sellDate).getTime()));
         const startDate = startDateInput.value ? new Date(startDateInput.value) : (settings.startDate ? new Date(settings.startDate) : new Date(firstPurchaseTime));
         const endDate = endDateInput.value ? new Date(endDateInput.value) : (settings.endDate ? new Date(settings.endDate) : new Date(lastSellTime));
-        
+
+        // 기간 내 완료된 투자 필터링 (매도일 기준)
+        const periodInvestments = completedInvestments.filter(inv => {
+            const sellDate = new Date(inv.sellDate);
+            return sellDate >= startDate && sellDate <= endDate;
+        });
+
+        // 기간 내 총 수익 계산
+        const totalProfitInPeriod = periodInvestments.length > 0 
+            ? periodInvestments.reduce((sum, inv) => sum + inv.profitLoss, 0) 
+            : 0;
+
+        // 전체 수익률 (기간과 무관)
+        const totalInvested = completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
+        const overallReturn = totalInvested > 0 ? (completedInvestments.reduce((sum, inv) => sum + inv.profitLoss, 0) / totalInvested) * 100 : 0;
+
+        document.getElementById('totalProfit').textContent = `${totalProfitInPeriod.toLocaleString()}원`; // 기간 내 수익 표시
+        document.getElementById('totalReturn').textContent = `${overallReturn.toFixed(2)}%`; // 전체 수익률
+
+        // 연 조정 수익률 계산
         const investmentPeriodDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
-        const adjustedPeriodDays = investmentPeriodDays > 0 ? investmentPeriodDays : totalDays || 1;
+        const adjustedPeriodDays = investmentPeriodDays > 0 ? investmentPeriodDays : 1; // 최소 1일 보장
         const adjustedPeriodYears = adjustedPeriodDays / 365;
 
         const adjustedReturn = initialCapital > 0 && adjustedPeriodYears > 0 
-            ? (totalProfit / initialCapital) * 100 / adjustedPeriodYears 
+            ? (totalProfitInPeriod / initialCapital) * 100 / adjustedPeriodYears 
             : 0;
 
         document.getElementById('adjustedReturn').textContent = `연 조정 수익률: ${adjustedReturn.toFixed(2)}%`;
 
+        // 원금 입력 이벤트
         initialCapitalInput.oninput = async () => {
             let value = initialCapitalInput.value.replace(/[^0-9]/g, '');
             if (value) {
@@ -787,7 +799,7 @@ function handleShortSell(id, row, actionCell) {
     }
     
     row.style.backgroundColor = '#cce5ff';
-    row.classList.add('short-sell'); // 클래스 추가
+    row.classList.add('short-sell');
     const shortSellLabel = document.createElement('span');
     shortSellLabel.textContent = ' *공매도 중*';
     shortSellLabel.style.color = 'blue';
