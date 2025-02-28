@@ -151,13 +151,16 @@ th {
     border-radius: 4px;
     font-size: 0.8rem;
     width: 80px;
-    text-align: right; /* 숫자 오른쪽 정렬 */
+    text-align: right;
 }
 
 .card input#initialCapital {
     width: 100px; /* 원금 입력 칸 약간 넓게 */
 }
-
+.card input[type="date"] {
+    width: 110px; /* 날짜 입력 필드 너비 증가 */
+    font-size: 0.75rem; /* 글씨 크기 약간 축소 */
+}
 .card label {
     margin-right: 4px;
     font-size: 0.8rem;
@@ -379,4 +382,14 @@ body.dark-mode .card input {
     
     .card input#initialCapital {
         width: 90px; /* 모바일에서 약간 조정 */
+        .card input[type="date"] {
+            width: 100px; /* 모바일에서 날짜 필드 너비 조정 */
+            font-size: 0.7rem;
+        }
+        .card p {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 4px;
+            
+}
 }}
