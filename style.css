@@ -366,6 +366,14 @@ body.dark-mode .current-rate p {
     color: #fff;
 }
 
+.table-btn.copy {
+    background-color: #17a2b8; /* 청록색 계열 */
+    color: #fff;
+    font-size: 0.6rem; /* 작게 설정 */
+    padding: 2px 4px; /* 작고 컴팩트한 패딩 */
+    margin-top: 2px; /* 환율 값과 간격 */
+}
+
 .action-buttons {
     display: flex;
     flex-wrap: nowrap;
@@ -420,5 +428,10 @@ body.dark-mode .current-rate p {
     .card input[type="date"] {
         width: 100px;
         font-size: 0.7rem;
+    }
+
+    .table-btn.copy {
+        font-size: 0.55rem;
+        padding: 1px 3px;
     }
 }
