@@ -20,10 +20,9 @@ body.dark-mode {
 }
 
 .container {
-    width: 100%;
-    max-width: 393px;
+    width: 100%; /* max-width 제거로 화면 전체 폭 사용 */
     margin: 0 auto;
-    padding: 10px;
+    padding: 0 4px; /* 양쪽 여백 최소화 */
 }
 
 h1 {
@@ -49,7 +48,7 @@ body.dark-mode h2 {
 
 .input-section {
     background-color: #ffffff;
-    padding: 10px;
+    padding: 8px; /* 내부 여백 축소 */
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     margin-bottom: 15px;
@@ -116,7 +115,7 @@ button:hover {
 
 table {
     width: 100%;
-    min-width: 360px;
+    /* min-width: 360px 제거로 화면 폭에 맞게 유연하게 조정 */
     border-collapse: collapse;
     background-color: #ffffff;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -127,7 +126,7 @@ body.dark-mode table {
 }
 
 th, td {
-    padding: 6px 4px;
+    padding: 6px 3px; /* 좌우 패딩 축소로 더 많은 내용 표시 */
     text-align: center;
     border-bottom: 1px solid #ddd;
     border-right: 1px solid #ddd;
@@ -159,13 +158,12 @@ body.dark-mode td {
     border-color: #555555;
 }
 
-/* 공매도 중 상태의 글씨 색상 조정 */
 tr.short-sell td:not(:last-child) {
-    color: #000000; /* 라이트 모드에서 진한 검정색으로 가독성 확보 */
+    color: #000000;
 }
 
 body.dark-mode tr.short-sell td:not(:last-child) {
-    color: #ffffff; /* 다크 모드에서 흰색으로 가독성 확보 */
+    color: #ffffff;
 }
 
 .summary-cards {
@@ -177,7 +175,7 @@ body.dark-mode tr.short-sell td:not(:last-child) {
 
 .card {
     background-color: #ffffff;
-    padding: 10px;
+    padding: 8px; /* 내부 여백 축소 */
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
@@ -286,6 +284,7 @@ body.dark-mode .card input {
     flex-wrap: wrap;
     gap: 5px;
     margin-bottom: 10px;
+    padding: 0 4px; /* 헤더도 여백 최소화 */
 }
 
 .settings-button, .header-btn {
@@ -305,7 +304,7 @@ body.dark-mode .card input {
 
 .current-rate {
     background-color: #f8f9fa;
-    padding: 10px;
+    padding: 8px; /* 내부 여백 축소 */
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     text-align: center;
@@ -375,10 +374,10 @@ body.dark-mode .current-rate p {
     margin-top: 4px;
 }
 
-/* 모바일 최적화 */
+/* 모바일 최적화 (갤럭시 S23 기준) */
 @media screen and (max-width: 393px) {
     .container {
-        padding: 5px;
+        padding: 0 2px; /* 더 작은 여백으로 최적화 */
     }
     
     h1 {
@@ -390,7 +389,7 @@ body.dark-mode .current-rate p {
     }
     
     .input-section {
-        padding: 8px;
+        padding: 6px;
     }
     
     input {
@@ -404,7 +403,7 @@ body.dark-mode .current-rate p {
     }
     
     th, td {
-        padding: 4px 2px;
+        padding: 4px 2px; /* 테이블 셀 패딩 축소 */
         font-size: 0.75rem;
     }
     
