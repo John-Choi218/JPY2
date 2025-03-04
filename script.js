@@ -216,6 +216,7 @@ function updateTables() {
 
     currentInvestments.forEach(investment => {
         const row = document.createElement('tr');
+        
         const dateCell = document.createElement('td');
         dateCell.textContent = new Date(investment.date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
         row.appendChild(dateCell);
@@ -224,8 +225,36 @@ function updateTables() {
         amountCell.textContent = investment.amountYen.toLocaleString();
         row.appendChild(amountCell);
 
+        // 환율 셀에 "복사" 버튼 추가
         const exchangeRateCell = document.createElement('td');
-        exchangeRateCell.textContent = investment.exchangeRate.toFixed(2);
+        const exchangeRateText = document.createElement('div');
+        exchangeRateText.textContent = investment.exchangeRate.toFixed(2);
+        exchangeRateCell.appendChild(exchangeRateText);
+
+        const copyButton = document.createElement('button');
+        copyButton.textContent = '복사';
+        copyButton.className = 'table-btn copy';
+        copyButton.onclick = function() {
+            navigator.clipboard.writeText(investment.exchangeRate.toFixed(2))
+                .then(() => {
+                    Swal.fire({
+                        icon: 'success',
+                        title: '복사 완료',
+                        text: `${investment.exchangeRate.toFixed(2)}이(가) 클립보드에 복사되었습니다.`,
+                        timer: 1000,
+                        showConfirmButton: false
+                    });
+                })
+                .catch(err => {
+                    console.error('복사 실패:', err);
+                    Swal.fire({
+                        icon: 'error',
+                        title: '복사 실패',
+                        text: '환율 복사에 실패했습니다.'
+                    });
+                });
+        };
+        exchangeRateCell.appendChild(copyButton);
         row.appendChild(exchangeRateCell);
 
         const amountKrwCell = document.createElement('td');
