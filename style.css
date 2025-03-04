@@ -20,9 +20,9 @@ body.dark-mode {
 }
 
 .container {
-    width: 100%; /* max-width 제거로 화면 전체 폭 사용 */
+    width: 100%;
     margin: 0 auto;
-    padding: 0 4px; /* 양쪽 여백 최소화 */
+    padding: 0 4px;
 }
 
 h1 {
@@ -48,7 +48,7 @@ body.dark-mode h2 {
 
 .input-section {
     background-color: #ffffff;
-    padding: 8px; /* 내부 여백 축소 */
+    padding: 8px;
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     margin-bottom: 15px;
@@ -115,7 +115,6 @@ button:hover {
 
 table {
     width: 100%;
-    /* min-width: 360px 제거로 화면 폭에 맞게 유연하게 조정 */
     border-collapse: collapse;
     background-color: #ffffff;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
@@ -126,7 +125,7 @@ body.dark-mode table {
 }
 
 th, td {
-    padding: 6px 3px; /* 좌우 패딩 축소로 더 많은 내용 표시 */
+    padding: 6px 3px;
     text-align: center;
     border-bottom: 1px solid #ddd;
     border-right: 1px solid #ddd;
@@ -175,7 +174,7 @@ body.dark-mode tr.short-sell td:not(:last-child) {
 
 .card {
     background-color: #ffffff;
-    padding: 8px; /* 내부 여백 축소 */
+    padding: 8px;
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
@@ -224,7 +223,12 @@ body.dark-mode .card p {
 
 .card input[type="date"] {
     width: 110px;
+    padding: 4px;
     font-size: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #ffffff;
+    color: #000000;
 }
 
 body.dark-mode .card input {
@@ -284,7 +288,7 @@ body.dark-mode .card input {
     flex-wrap: wrap;
     gap: 5px;
     margin-bottom: 10px;
-    padding: 0 4px; /* 헤더도 여백 최소화 */
+    padding: 0 4px;
 }
 
 .settings-button, .header-btn {
@@ -304,7 +308,7 @@ body.dark-mode .card input {
 
 .current-rate {
     background-color: #f8f9fa;
-    padding: 8px; /* 내부 여백 축소 */
+    padding: 8px;
     border-radius: 6px;
     box-shadow: 0 1px 3px rgba(0,0,0,0.1);
     text-align: center;
@@ -367,11 +371,11 @@ body.dark-mode .current-rate p {
 }
 
 .table-btn.copy {
-    background-color: #17a2b8; /* 청록색 계열 */
+    background-color: #17a2b8;
     color: #fff;
-    font-size: 0.6rem; /* 작게 설정 */
-    padding: 2px 4px; /* 작고 컴팩트한 패딩 */
-    margin-top: 2px; /* 환율 값과 간격 */
+    font-size: 0.6rem;
+    padding: 2px 4px;
+    margin-top: 2px;
 }
 
 .action-buttons {
@@ -382,10 +386,45 @@ body.dark-mode .current-rate p {
     margin-top: 4px;
 }
 
+/* 총 수익 기간 설정 스타일 */
+.period-settings {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    justify-content: flex-end;
+    align-items: center;
+    margin-top: 6px;
+}
+
+.period-settings label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+body.dark-mode .period-settings label {
+    color: #bbbbbb;
+}
+
+.period-settings input[type="date"] {
+    width: 110px;
+    padding: 4px;
+    font-size: 0.75rem;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background-color: #ffffff;
+    color: #000000;
+}
+
+body.dark-mode .period-settings input[type="date"] {
+    background-color: #2c2c2c;
+    color: #ffffff;
+    border-color: #555555;
+}
+
 /* 모바일 최적화 (갤럭시 S23 기준) */
 @media screen and (max-width: 393px) {
     .container {
-        padding: 0 2px; /* 더 작은 여백으로 최적화 */
+        padding: 0 2px;
     }
     
     h1 {
@@ -411,7 +450,7 @@ body.dark-mode .current-rate p {
     }
     
     th, td {
-        padding: 4px 2px; /* 테이블 셀 패딩 축소 */
+        padding: 4px 2px;
         font-size: 0.75rem;
     }
     
@@ -433,5 +472,15 @@ body.dark-mode .current-rate p {
     .table-btn.copy {
         font-size: 0.55rem;
         padding: 1px 3px;
+    }
+
+    .period-settings {
+        justify-content: flex-start;
+        gap: 4px;
+    }
+    
+    .period-settings input[type="date"] {
+        width: 100px;
+        font-size: 0.7rem;
     }
 }

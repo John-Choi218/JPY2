@@ -8,7 +8,9 @@ let settings = {
     sellThreshold: 2,
     initialCapital: null,
     startDate: null,
-    endDate: null
+    endDate: null,
+    profitStartDate: null, // 총 수익 기간 설정 추가
+    profitEndDate: null   // 총 수익 기간 설정 추가
 };
 
 // Firebase 초기화
@@ -225,7 +227,6 @@ function updateTables() {
         amountCell.textContent = investment.amountYen.toLocaleString();
         row.appendChild(amountCell);
 
-        // 환율 셀에 "복사" 버튼 추가
         const exchangeRateCell = document.createElement('td');
         const exchangeRateText = document.createElement('div');
         exchangeRateText.textContent = investment.exchangeRate.toFixed(2);
@@ -397,42 +398,48 @@ async function updateSummary() {
         const initialCapitalInput = document.getElementById('initialCapital');
         const startDateInput = document.getElementById('startDate');
         const endDateInput = document.getElementById('endDate');
+        const profitStartDateInput = document.getElementById('profitStartDate');
+        const profitEndDateInput = document.getElementById('profitEndDate');
 
-        // 투자 원금
-        const initialCapitalValue = initialCapitalInput.value.replace(/[^0-9]/g, '');
-        const initialCapital = Number(initialCapitalValue) || settings.initialCapital || completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
-
-        // 기간 설정 (기본값은 데이터 전체 범위)
+        // 총 수익 계산을 위한 기간 설정
         const firstPurchaseTime = Math.min(...completedInvestments.map(inv => new Date(inv.date).getTime()));
         const lastSellTime = Math.max(...completedInvestments.map(inv => new Date(inv.sellDate).getTime()));
+        const profitStartDate = profitStartDateInput.value ? new Date(profitStartDateInput.value) : (settings.profitStartDate ? new Date(settings.profitStartDate) : new Date(firstPurchaseTime));
+        const profitEndDate = profitEndDateInput.value ? new Date(profitEndDateInput.value) : (settings.profitEndDate ? new Date(settings.profitEndDate) : new Date(lastSellTime));
+
+        // 총 수익을 위한 기간 내 투자 필터링
+        const profitPeriodInvestments = completedInvestments.filter(inv => {
+            const sellDate = new Date(inv.sellDate);
+            return sellDate >= profitStartDate && sellDate <= profitEndDate;
+        });
+        const totalProfitInPeriod = profitPeriodInvestments.length > 0
+            ? profitPeriodInvestments.reduce((sum, inv) => sum + inv.profitLoss, 0)
+            : 0;
+        document.getElementById('totalProfit').textContent = `${totalProfitInPeriod.toLocaleString()}원`;
+
+        // 총 수익률 및 연 조정 수익률 계산을 위한 기간 설정
         const startDate = startDateInput.value ? new Date(startDateInput.value) : (settings.startDate ? new Date(settings.startDate) : new Date(firstPurchaseTime));
         const endDate = endDateInput.value ? new Date(endDateInput.value) : (settings.endDate ? new Date(settings.endDate) : new Date(lastSellTime));
 
-        // 기간 내 완료된 투자 필터링 (매도일 기준)
+        const initialCapitalValue = initialCapitalInput.value.replace(/[^0-9]/g, '');
+        const initialCapital = Number(initialCapitalValue) || settings.initialCapital || completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
+
         const periodInvestments = completedInvestments.filter(inv => {
             const sellDate = new Date(inv.sellDate);
             return sellDate >= startDate && sellDate <= endDate;
         });
 
-        // 기간 내 총 수익 계산
-        const totalProfitInPeriod = periodInvestments.length > 0 
-            ? periodInvestments.reduce((sum, inv) => sum + inv.profitLoss, 0) 
-            : 0;
-
-        // 전체 수익률 (기간과 무관)
         const totalInvested = completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
         const overallReturn = totalInvested > 0 ? (completedInvestments.reduce((sum, inv) => sum + inv.profitLoss, 0) / totalInvested) * 100 : 0;
 
-        document.getElementById('totalProfit').textContent = `${totalProfitInPeriod.toLocaleString()}원`; // 기간 내 수익 표시
-        document.getElementById('totalReturn').textContent = `${overallReturn.toFixed(2)}%`; // 전체 수익률
+        document.getElementById('totalReturn').textContent = `${overallReturn.toFixed(2)}%`;
 
-        // 연 조정 수익률 계산
         const investmentPeriodDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
-        const adjustedPeriodDays = investmentPeriodDays > 0 ? investmentPeriodDays : 1; // 최소 1일 보장
+        const adjustedPeriodDays = investmentPeriodDays > 0 ? investmentPeriodDays : 1;
         const adjustedPeriodYears = adjustedPeriodDays / 365;
 
         const adjustedReturn = initialCapital > 0 && adjustedPeriodYears > 0 
-            ? (totalProfitInPeriod / initialCapital) * 100 / adjustedPeriodYears 
+            ? (periodInvestments.reduce((sum, inv) => sum + inv.profitLoss, 0) / initialCapital) * 100 / adjustedPeriodYears 
             : 0;
 
         document.getElementById('adjustedReturn').textContent = `연 조정 수익률: ${adjustedReturn.toFixed(2)}%`;
@@ -452,6 +459,18 @@ async function updateSummary() {
         if (!initialCapitalInput.value && initialCapital) {
             initialCapitalInput.value = initialCapital.toLocaleString('ko-KR') + '원';
         }
+
+        // 총 수익 기간 설정 이벤트
+        profitStartDateInput.onchange = async () => {
+            settings.profitStartDate = profitStartDateInput.value || null;
+            await saveSettings();
+            updateSummary();
+        };
+        profitEndDateInput.onchange = async () => {
+            settings.profitEndDate = profitEndDateInput.value || null;
+            await saveSettings();
+            updateSummary();
+        };
 
         startDateInput.onchange = async () => {
             settings.startDate = startDateInput.value || null;
@@ -484,13 +503,17 @@ async function loadSettings() {
             }
             if (settings.startDate) document.getElementById('startDate').value = settings.startDate;
             if (settings.endDate) document.getElementById('endDate').value = settings.endDate;
+            if (settings.profitStartDate) document.getElementById('profitStartDate').value = settings.profitStartDate;
+            if (settings.profitEndDate) document.getElementById('profitEndDate').value = settings.profitEndDate;
         } else {
             settings = { 
                 buyThreshold: 2, 
                 sellThreshold: 2, 
                 initialCapital: null, 
                 startDate: null, 
-                endDate: null 
+                endDate: null,
+                profitStartDate: null,
+                profitEndDate: null
             };
             await saveSettings();
         }
@@ -502,7 +525,9 @@ async function loadSettings() {
             sellThreshold: 2, 
             initialCapital: null, 
             startDate: null, 
-            endDate: null 
+            endDate: null,
+            profitStartDate: null,
+            profitEndDate: null
         };
     }
 }
