@@ -9,8 +9,8 @@ let settings = {
     initialCapital: null,
     startDate: null,
     endDate: null,
-    profitStartDate: null, // 총 수익 기간 설정 추가
-    profitEndDate: null   // 총 수익 기간 설정 추가
+    profitStartDate: null,
+    profitEndDate: null
 };
 
 // Firebase 초기화
@@ -210,7 +210,8 @@ async function sellInvestment(id) {
 
 // 테이블 업데이트
 function updateTables() {
-    currentInvestments.sort((a, b) => new Date(a.date) - new Date(b.date));
+    // 날짜 내림차순 정렬 (최신이 아래로)
+    currentInvestments.sort((a, b) => new Date(b.date) - new Date(a.date));
     completedInvestments.sort((a, b) => new Date(b.sellDate) - new Date(a.sellDate));
 
     const tableBody = document.querySelector('#currentInvestmentsTable tbody');
