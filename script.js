@@ -210,8 +210,8 @@ async function sellInvestment(id) {
 
 // 테이블 업데이트
 function updateTables() {
-    // 날짜 내림차순 정렬 (최신이 아래로)
-    currentInvestments.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // 구매 환율 기준 오름차순 정렬 (낮은 환율이 아래로)
+    currentInvestments.sort((a, b) => Number(a.exchangeRate) - Number(b.exchangeRate));
     completedInvestments.sort((a, b) => new Date(b.sellDate) - new Date(a.sellDate));
 
     const tableBody = document.querySelector('#currentInvestmentsTable tbody');
