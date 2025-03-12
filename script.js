@@ -64,6 +64,7 @@ async function editInvestment(id) {
     document.getElementById('purchaseDate').value = new Date(investment.date).toISOString().split('T')[0];
     document.getElementById('amountYen').value = investment.amountYen;
     document.getElementById('exchangeRate').value = investment.exchangeRate;
+    document.getElementById('note').value = investment.note || '';
     
     const submitButton = document.querySelector('#investmentForm button[type="submit"]');
     submitButton.textContent = '수정';
@@ -87,13 +88,15 @@ document.getElementById('investmentForm').addEventListener('submit', async funct
     const purchaseDate = document.getElementById('purchaseDate').value;
     const amountYen = Number(document.getElementById('amountYen').value);
     const exchangeRate = Number(document.getElementById('exchangeRate').value);
+    const note = document.getElementById('note').value.trim();
     const amountKrw = amountYen * (exchangeRate / 100);
     
     const investment = {
         date: new Date(purchaseDate).toISOString(),
         amountYen: amountYen,
         exchangeRate: exchangeRate,
-        amountKrw: amountKrw
+        amountKrw: amountKrw,
+        note: note || ''
     };
     
     try {
@@ -264,6 +267,15 @@ function updateTables() {
         row.appendChild(amountKrwCell);
 
         const actionCell = document.createElement('td');
+        
+        // 비고가 있으면 작업 셀 상단에 표시 (공란 제거)
+        if (investment.note) {
+            const noteSpan = document.createElement('span');
+            noteSpan.className = 'note-text';
+            noteSpan.textContent = investment.note;
+            actionCell.appendChild(noteSpan);
+        }
+
         const buyTargetVal = Number(investment.exchangeRate) - settings.buyThreshold;
         const sellTargetVal = Number(investment.exchangeRate) + settings.sellThreshold;
 
