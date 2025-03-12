@@ -421,6 +421,19 @@ body.dark-mode .period-settings input[type="date"] {
     border-color: #555555;
 }
 
+/* 비고 텍스트 스타일 */
+.note-text {
+    font-size: 0.75rem;
+    color: #666;
+    font-weight: bold;
+    display: block;
+    margin-bottom: 4px;
+}
+
+body.dark-mode .note-text {
+    color: #bbbbbb;
+}
+
 /* 모바일 최적화 (갤럭시 S23 기준) */
 @media screen and (max-width: 393px) {
     .container {
@@ -481,6 +494,10 @@ body.dark-mode .period-settings input[type="date"] {
     
     .period-settings input[type="date"] {
         width: 100px;
+        font-size: 0.7rem;
+    }
+
+    .note-text {
         font-size: 0.7rem;
     }
 }
