@@ -213,7 +213,6 @@ async function sellInvestment(id) {
 
 // 테이블 업데이트
 function updateTables() {
-    // 구매 환율 기준 오름차순 정렬 (낮은 환율이 아래로)
     currentInvestments.sort((a, b) => Number(a.exchangeRate) - Number(b.exchangeRate));
     completedInvestments.sort((a, b) => new Date(b.sellDate) - new Date(a.sellDate));
 
@@ -268,7 +267,6 @@ function updateTables() {
 
         const actionCell = document.createElement('td');
         
-        // 비고가 있으면 작업 셀 상단에 표시 (공란 제거)
         if (investment.note) {
             const noteSpan = document.createElement('span');
             noteSpan.className = 'note-text';
@@ -397,6 +395,30 @@ function updateTables() {
     `}).join('');
 }
 
+// 원금 입력을 위한 alert 창
+async function promptInitialCapital() {
+    const { value: initialCapitalStr } = await Swal.fire({
+        title: '원금 입력',
+        input: 'number',
+        inputLabel: '원금을 입력하세요 (원)',
+        inputPlaceholder: '예: 1000000',
+        showCancelButton: true,
+        confirmButtonText: '저장',
+        cancelButtonText: '취소',
+        inputValidator: (value) => {
+            if (!value || isNaN(value) || Number(value) <= 0) {
+                return '유효한 숫자를 입력해주세요.';
+            }
+        }
+    });
+
+    if (initialCapitalStr) {
+        settings.initialCapital = Number(initialCapitalStr);
+        await saveSettings();
+        updateSummary();
+    }
+}
+
 // 요약 정보 업데이트
 async function updateSummary() {
     try {
@@ -404,11 +426,10 @@ async function updateSummary() {
             document.getElementById('totalProfit').textContent = '0원';
             document.getElementById('totalReturn').textContent = '0%';
             document.getElementById('adjustedReturn').textContent = '연 조정 수익률: 0%';
-            document.getElementById('initialCapital').value = '0';
+            document.getElementById('initialCapitalDisplay').textContent = '0원';
             return;
         }
 
-        const initialCapitalInput = document.getElementById('initialCapital');
         const startDateInput = document.getElementById('startDate');
         const endDateInput = document.getElementById('endDate');
         const profitStartDateInput = document.getElementById('profitStartDate');
@@ -434,8 +455,8 @@ async function updateSummary() {
         const startDate = startDateInput.value ? new Date(startDateInput.value) : (settings.startDate ? new Date(settings.startDate) : new Date(firstPurchaseTime));
         const endDate = endDateInput.value ? new Date(endDateInput.value) : (settings.endDate ? new Date(settings.endDate) : new Date(lastSellTime));
 
-        const initialCapitalValue = initialCapitalInput.value.replace(/[^0-9]/g, '');
-        const initialCapital = Number(initialCapitalValue) || settings.initialCapital || completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
+        const initialCapital = settings.initialCapital || completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
+        document.getElementById('initialCapitalDisplay').textContent = `${initialCapital.toLocaleString()}원`;
 
         const periodInvestments = completedInvestments.filter(inv => {
             const sellDate = new Date(inv.sellDate);
@@ -456,22 +477,6 @@ async function updateSummary() {
             : 0;
 
         document.getElementById('adjustedReturn').textContent = `연 조정 수익률: ${adjustedReturn.toFixed(2)}%`;
-
-        // 원금 입력 이벤트
-        initialCapitalInput.oninput = async () => {
-            let value = initialCapitalInput.value.replace(/[^0-9]/g, '');
-            if (value) {
-                value = Number(value).toLocaleString('ko-KR') + '원';
-            }
-            initialCapitalInput.value = value;
-            settings.initialCapital = Number(value.replace(/[^0-9]/g, '')) || null;
-            await saveSettings();
-            updateSummary();
-        };
-
-        if (!initialCapitalInput.value && initialCapital) {
-            initialCapitalInput.value = initialCapital.toLocaleString('ko-KR') + '원';
-        }
 
         // 총 수익 기간 설정 이벤트
         profitStartDateInput.onchange = async () => {
@@ -501,6 +506,7 @@ async function updateSummary() {
         document.getElementById('totalProfit').textContent = '0원';
         document.getElementById('totalReturn').textContent = '데이터 로드에 실패했습니다.';
         document.getElementById('adjustedReturn').textContent = '연 조정 수익률: 0%';
+        document.getElementById('initialCapitalDisplay').textContent = '0원';
     }
 }
 
@@ -510,10 +516,6 @@ async function loadSettings() {
         const doc = await db.collection('settings').doc('thresholds').get();
         if (doc.exists) {
             settings = doc.data();
-            const initialCapitalInput = document.getElementById('initialCapital');
-            if (settings.initialCapital) {
-                initialCapitalInput.value = settings.initialCapital.toLocaleString('ko-KR') + '원';
-            }
             if (settings.startDate) document.getElementById('startDate').value = settings.startDate;
             if (settings.endDate) document.getElementById('endDate').value = settings.endDate;
             if (settings.profitStartDate) document.getElementById('profitStartDate').value = settings.profitStartDate;
