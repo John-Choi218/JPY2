@@ -6,6 +6,7 @@ let completedInvestments = [];
 let settings = {
     buyThreshold: 2,
     sellThreshold: 2,
+    shortSellBuyDiff: 5, // 공매도 다음 매수가 차이 기본값
     initialCapital: null,
     startDate: null,
     endDate: null,
@@ -524,6 +525,7 @@ async function loadSettings() {
             settings = { 
                 buyThreshold: 2, 
                 sellThreshold: 2, 
+                shortSellBuyDiff: 5, // 공매도 기본값 추가
                 initialCapital: null, 
                 startDate: null, 
                 endDate: null,
@@ -538,6 +540,7 @@ async function loadSettings() {
         settings = { 
             buyThreshold: 2, 
             sellThreshold: 2, 
+            shortSellBuyDiff: 5, // 공매도 기본값 추가
             initialCapital: null, 
             startDate: null, 
             endDate: null,
@@ -560,8 +563,21 @@ async function saveSettings() {
 document.getElementById('openSettings').addEventListener('click', async function() {
     try {
         const doc = await db.collection('settings').doc('thresholds').get();
-        const currentSettings = doc.exists ? doc.data() : { buyThreshold: 2, sellThreshold: 2 };
-        
+        const currentSettings = doc.exists ? doc.data() : { buyThreshold: 2, sellThreshold: 2, shortSellBuyDiff: 5 };
+
+        // 공매도 중인 투자 내역 확인
+        const shortSellInvestments = currentInvestments.filter(inv => inv.shortSell);
+        let shortSellInputHtml = '';
+        if (shortSellInvestments.length > 0) {
+            shortSellInputHtml = `
+                <div class="form-group">
+                    <label for="shortSellBuyDiff">공매도 다음 매수가 차이 (원)</label>
+                    <input type="number" id="shortSellBuyDiff" class="swal2-input" 
+                        value="${currentSettings.shortSellBuyDiff || 5}" step="0.01">
+                </div>
+            `;
+        }
+
         const { value: formValues } = await Swal.fire({
             title: '목표 환율 설정',
             html: `
@@ -576,6 +592,7 @@ document.getElementById('openSettings').addEventListener('click', async function
                         <input type="number" id="sellThreshold" class="swal2-input" 
                             value="${currentSettings.sellThreshold}" step="0.01">
                     </div>
+                    ${shortSellInputHtml}
                 </div>
             `,
             focusConfirm: false,
@@ -583,16 +600,33 @@ document.getElementById('openSettings').addEventListener('click', async function
             confirmButtonText: '저장',
             cancelButtonText: '취소',
             preConfirm: () => {
-                return {
+                const result = {
                     buyThreshold: Number(document.getElementById('buyThreshold').value),
                     sellThreshold: Number(document.getElementById('sellThreshold').value)
+                };
+                if (shortSellInvestments.length > 0) {
+                    result.shortSellBuyDiff = Number(document.getElementById('shortSellBuyDiff').value);
                 }
+                return result;
             }
         });
 
         if (formValues) {
             settings.buyThreshold = formValues.buyThreshold;
             settings.sellThreshold = formValues.sellThreshold;
+
+            // 공매도 다음 매수가 차이 설정 및 적용
+            if (formValues.shortSellBuyDiff && shortSellInvestments.length > 0) {
+                settings.shortSellBuyDiff = formValues.shortSellBuyDiff;
+                for (const inv of shortSellInvestments) {
+                    const targetBuy = inv.shortSellSellRate - formValues.shortSellBuyDiff;
+                    await db.collection('currentInvestments').doc(inv.id).update({
+                        shortSellTargetBuy: targetBuy
+                    });
+                    inv.shortSellTargetBuy = targetBuy; // 로컬 데이터도 업데이트
+                }
+            }
+
             await saveSettings();
             updateTables();
             Swal.fire({
@@ -866,7 +900,7 @@ function handleShortSell(id, row, actionCell) {
         alert('올바른 판매 환율을 입력해주세요.');
         return;
     }
-    
+
     row.style.backgroundColor = '#cce5ff';
     row.classList.add('short-sell');
     const shortSellLabel = document.createElement('span');
@@ -874,8 +908,10 @@ function handleShortSell(id, row, actionCell) {
     shortSellLabel.style.color = 'blue';
     shortSellLabel.style.fontWeight = 'bold';
     actionCell.appendChild(shortSellLabel);
-    
-    const targetBuy = sellRate - 5;
+
+    // 설정에서 shortSellBuyDiff 값을 사용 (기본값 5)
+    const shortSellBuyDiff = settings.shortSellBuyDiff || 5;
+    const targetBuy = sellRate - shortSellBuyDiff;
     const targetBuyDiv = document.createElement('div');
     targetBuyDiv.textContent = `다음 매수가: ${targetBuy.toFixed(2)}`;
     targetBuyDiv.style.color = 'blue';
@@ -885,6 +921,14 @@ function handleShortSell(id, row, actionCell) {
         shortSell: true,
         shortSellSellRate: sellRate,
         shortSellTargetBuy: targetBuy,
+    }).then(() => {
+        const investment = currentInvestments.find(inv => inv.id === id);
+        if (investment) {
+            investment.shortSell = true;
+            investment.shortSellSellRate = sellRate;
+            investment.shortSellTargetBuy = targetBuy;
+        }
+        updateTables();
     }).catch(error => {
         console.error('공매도 정보 저장 실패:', error);
     });
