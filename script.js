@@ -214,7 +214,13 @@ async function sellInvestment(id) {
 
 // 테이블 업데이트
 function updateTables() {
-    currentInvestments.sort((a, b) => Number(a.exchangeRate) - Number(b.exchangeRate));
+    // "다음 매수가"를 기준으로 오름차순 정렬 (공매도 상태 고려)
+    currentInvestments.sort((a, b) => {
+        const buyTargetA = a.shortSell && a.shortSellTargetBuy !== undefined ? Number(a.shortSellTargetBuy) : Number(a.exchangeRate) - settings.buyThreshold;
+        const buyTargetB = b.shortSell && b.shortSellTargetBuy !== undefined ? Number(b.shortSellTargetBuy) : Number(b.exchangeRate) - settings.buyThreshold;
+        return buyTargetA - buyTargetB;
+    });
+
     completedInvestments.sort((a, b) => new Date(b.sellDate) - new Date(a.sellDate));
 
     const tableBody = document.querySelector('#currentInvestmentsTable tbody');
@@ -404,7 +410,7 @@ async function promptInitialCapital() {
         inputLabel: '원금을 입력하세요 (원)',
         inputPlaceholder: '예: 1000000',
         showCancelButton: true,
-        confirmButtonText: '저장',
+confirmButtonText: '저장',
         cancelButtonText: '취소',
         inputValidator: (value) => {
             if (!value || isNaN(value) || Number(value) <= 0) {
@@ -772,7 +778,7 @@ async function deleteCompletedInvestment(id) {
 // 환율 정보 가져오기
 async function fetchExchangeRate() {
     try {
-        const response = await fetch('https://m.search.naver.com/p/csearch/content/qapirender.nhn?key=calculator&pkid=141&q=%ED%99%98%EC%9C%A8&where=m&u1=keb&u6=standardUnit&u7=0&u3=JPY&u4=KRW&u8=down&u2=100', {
+        const response = await fetch('https://m.search.naver.com/p/csearch/content/qapirender.nhn?key=calculator&pkid=141&q=%ED%99%98%EC%9C%A8&where=m&u1=keb&u6= WUnit&u7=0&u3=JPY&u4=KRW&u8=down&u2=100', {
             method: 'GET',
             headers: { 'Accept': 'application/json' }
         });
