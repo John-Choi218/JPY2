@@ -46,7 +46,7 @@ async function loadData() {
         }));
 
         await loadSettings();
-        updateTables();
+        // updateTables() 호출 제거 - 초기 로드에서 처리
         updateSummary();
     } catch (error) {
         console.error('데이터 로드 실패:', error);
@@ -601,7 +601,7 @@ async function loadSettings() {
             };
             await saveSettings();
         }
-        updateTables();
+        // updateTables() 호출 제거 - 초기 로드에서 처리
     } catch (error) {
         console.error('설정 로드 실패:', error);
         settings = { 
@@ -722,6 +722,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         requestNotificationPermission();
         startExchangeRateUpdates();
         initializeShortSellToggle();
+        // 공매도 상태 복원 후 테이블 다시 업데이트
+        updateTables();
     } catch (error) {
         console.error('초기 로드 중 오류 발생:', error);
     }
