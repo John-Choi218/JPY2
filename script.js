@@ -17,6 +17,10 @@ let settings = {
 // 공매도 축소/확장 상태 변수 추가
 let shortSellCollapsed = false;
 
+// 페이지네이션 관련 변수 추가
+let currentPage = 1;
+const itemsPerPage = 30;
+
 // Firebase 초기화
 const firebaseConfig = {
     apiKey: "AIzaSyDNH3kgVbLnf-1-htdxoSvSYpZu2yQKtKg",
@@ -129,6 +133,8 @@ document.getElementById('investmentForm').addEventListener('submit', async funct
             currentInvestments.push(investment);
         }
         
+        // 데이터 변경 시 페이지 리셋
+        currentPage = 1;
         updateTables();
         this.reset();
         
@@ -164,6 +170,8 @@ async function deleteInvestment(id) {
     try {
         await db.collection('currentInvestments').doc(id).delete();
         currentInvestments = currentInvestments.filter(inv => inv.id !== id);
+        // 데이터 변경 시 페이지 리셋
+        currentPage = 1;
         updateTables();
         updateSummary();
     } catch (error) {
@@ -207,6 +215,8 @@ async function sellInvestment(id) {
         currentInvestments = currentInvestments.filter(inv => inv.id !== id);
         completedInvestments.push(completedInvestment);
         
+        // 데이터 변경 시 페이지 리셋
+        currentPage = 1;
         updateTables();
         updateSummary();
     } catch (error) {
@@ -273,24 +283,43 @@ function updateTables() {
     }
     
     const historyTable = document.querySelector('#historyTable tbody');
-    historyTable.innerHTML = completedInvestments.map(inv => {
-        return `
-        <tr>
-            <td>${new Date(inv.date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</td>
-            <td>${new Date(inv.sellDate).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</td>
-            <td>${inv.amountYen.toLocaleString()}</td>
-            <td>${inv.exchangeRate.toFixed(2)}</td>
-            <td>${inv.sellExchangeRate.toFixed(2)}</td>
-            <td>${inv.profitLoss.toLocaleString()}</td>
-            <td>${inv.profitLossRate.toFixed(1)}%</td>
-            <td>
-                <div class="button-group">
-                    <button class="edit-button" onclick="editCompletedInvestment('${inv.id}')">수정</button>
-                    <button class="delete-button" onclick="deleteCompletedInvestment('${inv.id}')">삭제</button>
-                </div>
-            </td>
-        </tr>
-    `}).join('');
+    
+    // 페이지네이션 적용
+    const totalItems = completedInvestments.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    
+    if (totalItems > 0) {
+        // 현재 페이지에 해당하는 데이터만 표시
+        const startIndex = (currentPage - 1) * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+        const currentPageData = completedInvestments.slice(startIndex, endIndex);
+        
+        historyTable.innerHTML = currentPageData.map(inv => {
+            return `
+            <tr>
+                <td>${new Date(inv.date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</td>
+                <td>${new Date(inv.sellDate).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })}</td>
+                <td>${inv.amountYen.toLocaleString()}</td>
+                <td>${inv.exchangeRate.toFixed(2)}</td>
+                <td>${inv.sellExchangeRate.toFixed(2)}</td>
+                <td>${inv.profitLoss.toLocaleString()}</td>
+                <td>${inv.profitLossRate.toFixed(1)}%</td>
+                <td>
+                    <div class="button-group">
+                        <button class="edit-button" onclick="editCompletedInvestment('${inv.id}')">수정</button>
+                        <button class="delete-button" onclick="deleteCompletedInvestment('${inv.id}')">삭제</button>
+                    </div>
+                </td>
+            </tr>
+        `}).join('');
+        
+        // 페이지네이션 컨트롤 표시
+        updatePagination(totalItems, totalPages);
+    } else {
+        historyTable.innerHTML = '';
+        // 데이터가 없을 때 페이지네이션 숨김
+        document.getElementById('paginationContainer').style.display = 'none';
+    }
 }
 
 // 투자 행 생성 함수
@@ -461,6 +490,109 @@ function expandShortSell() {
     localStorage.setItem('shortSellCollapsed', 'false');
     
     updateTables();
+}
+
+// 페이지네이션 업데이트 함수
+function updatePagination(totalItems, totalPages) {
+    const paginationContainer = document.getElementById('paginationContainer');
+    const paginationInfo = document.getElementById('paginationInfo');
+    const pageNumbers = document.getElementById('pageNumbers');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    
+    if (totalPages <= 1) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+    
+    paginationContainer.style.display = 'block';
+    
+    // 페이지 정보 업데이트
+    const startItem = (currentPage - 1) * itemsPerPage + 1;
+    const endItem = Math.min(currentPage * itemsPerPage, totalItems);
+    paginationInfo.textContent = `전체 ${totalItems}개 중 ${startItem}-${endItem}`;
+    
+    // 이전/다음 버튼 상태 업데이트
+    prevBtn.disabled = currentPage === 1;
+    nextBtn.disabled = currentPage === totalPages;
+    
+    // 페이지 번호 생성
+    pageNumbers.innerHTML = '';
+    
+    // 표시할 페이지 번호 범위 계산 (최대 5개)
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, currentPage + 2);
+    
+    // 시작 페이지 조정
+    if (endPage - startPage < 4) {
+        if (startPage === 1) {
+            endPage = Math.min(totalPages, startPage + 4);
+        } else {
+            startPage = Math.max(1, endPage - 4);
+        }
+    }
+    
+    // 첫 페이지 표시
+    if (startPage > 1) {
+        addPageNumber(1, pageNumbers);
+        if (startPage > 2) {
+            addPageEllipsis(pageNumbers);
+        }
+    }
+    
+    // 페이지 번호들 표시
+    for (let i = startPage; i <= endPage; i++) {
+        addPageNumber(i, pageNumbers);
+    }
+    
+    // 마지막 페이지 표시
+    if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+            addPageEllipsis(pageNumbers);
+        }
+        addPageNumber(totalPages, pageNumbers);
+    }
+}
+
+// 페이지 번호 추가 함수
+function addPageNumber(pageNum, container) {
+    const pageElement = document.createElement('span');
+    pageElement.className = `page-number ${pageNum === currentPage ? 'active' : ''}`;
+    pageElement.textContent = pageNum;
+    pageElement.onclick = () => goToPage(pageNum);
+    container.appendChild(pageElement);
+}
+
+// 페이지 생략 표시 추가 함수
+function addPageEllipsis(container) {
+    const ellipsis = document.createElement('span');
+    ellipsis.className = 'page-number disabled';
+    ellipsis.textContent = '...';
+    ellipsis.style.cursor = 'default';
+    container.appendChild(ellipsis);
+}
+
+// 특정 페이지로 이동 함수
+function goToPage(pageNum) {
+    if (pageNum !== currentPage) {
+        currentPage = pageNum;
+        updateTables();
+        // 페이지 상단으로 스크롤
+        document.querySelector('.investment-history').scrollIntoView({ behavior: 'smooth' });
+    }
+}
+
+// 페이지 변경 함수 (이전/다음 버튼용)
+function changePage(direction) {
+    const totalPages = Math.ceil(completedInvestments.length / itemsPerPage);
+    const newPage = currentPage + direction;
+    
+    if (newPage >= 1 && newPage <= totalPages) {
+        currentPage = newPage;
+        updateTables();
+        // 페이지 상단으로 스크롤
+        document.querySelector('.investment-history').scrollIntoView({ behavior: 'smooth' });
+    }
 }
 
 // 원금 입력을 위한 alert 창
@@ -830,6 +962,8 @@ async function editCompletedInvestment(id) {
         if (index !== -1) {
             completedInvestments[index] = updatedInvestment;
         }
+        // 데이터 변경 시 페이지 리셋
+        currentPage = 1;
         updateTables();
         updateSummary();
         Swal.fire({
@@ -854,6 +988,8 @@ async function deleteCompletedInvestment(id) {
     try {
         await db.collection('completedInvestments').doc(id).delete();
         completedInvestments = completedInvestments.filter(inv => inv.id !== id);
+        // 데이터 변경 시 페이지 리셋
+        currentPage = 1;
         updateTables();
         updateSummary();
     } catch (error) {

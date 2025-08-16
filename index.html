@@ -118,6 +118,18 @@
                     <tbody></tbody>
                 </table>
             </div>
+            
+            <!-- 페이지네이션 컨트롤 -->
+            <div class="pagination-container" id="paginationContainer" style="display: none;">
+                <div class="pagination-info">
+                    <span id="paginationInfo">전체 0개 중 1-30</span>
+                </div>
+                <div class="pagination-controls">
+                    <button id="prevPage" class="pagination-btn" onclick="changePage(-1)">이전</button>
+                    <div class="page-numbers" id="pageNumbers"></div>
+                    <button id="nextPage" class="pagination-btn" onclick="changePage(1)">다음</button>
+                </div>
+            </div>
         </div>
     </div>
     
