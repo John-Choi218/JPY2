@@ -14,6 +14,9 @@ let settings = {
     profitEndDate: null
 };
 
+// 공매도 축소/확장 상태 변수 추가
+let shortSellCollapsed = false;
+
 // Firebase 초기화
 const firebaseConfig = {
     apiKey: "AIzaSyDNH3kgVbLnf-1-htdxoSvSYpZu2yQKtKg",
@@ -226,160 +229,48 @@ function updateTables() {
     const tableBody = document.querySelector('#currentInvestmentsTable tbody');
     tableBody.innerHTML = '';
 
-    currentInvestments.forEach(investment => {
-        const row = document.createElement('tr');
+    // 공매도 중인 투자들 분리
+    const shortSellInvestments = currentInvestments.filter(inv => inv.shortSell);
+    const normalInvestments = currentInvestments.filter(inv => !inv.shortSell);
+
+    // 공매도 축소 모드일 때 요약 행 추가
+    if (shortSellCollapsed && shortSellInvestments.length > 0) {
+        const summaryRow = document.createElement('tr');
+        summaryRow.className = 'shortsell-summary-row';
         
-        const dateCell = document.createElement('td');
-        dateCell.textContent = new Date(investment.date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
-        row.appendChild(dateCell);
-
-        const amountCell = document.createElement('td');
-        amountCell.textContent = investment.amountYen.toLocaleString();
-        row.appendChild(amountCell);
-
-        const exchangeRateCell = document.createElement('td');
-        const exchangeRateText = document.createElement('div');
-        exchangeRateText.textContent = investment.exchangeRate.toFixed(2);
-        exchangeRateCell.appendChild(exchangeRateText);
-
-        const copyButton = document.createElement('button');
-        copyButton.textContent = '복사';
-        copyButton.className = 'table-btn copy';
-        copyButton.onclick = function() {
-            navigator.clipboard.writeText(investment.exchangeRate.toFixed(2))
-                .then(() => {
-                    Swal.fire({
-                        icon: 'success',
-                        title: '복사 완료',
-                        text: `${investment.exchangeRate.toFixed(2)}이(가) 클립보드에 복사되었습니다.`,
-                        timer: 1000,
-                        showConfirmButton: false
-                    });
-                })
-                .catch(err => {
-                    console.error('복사 실패:', err);
-                    Swal.fire({
-                        icon: 'error',
-                        title: '복사 실패',
-                        text: '환율 복사에 실패했습니다.'
-                    });
-                });
-        };
-        exchangeRateCell.appendChild(copyButton);
-        row.appendChild(exchangeRateCell);
-
-        const amountKrwCell = document.createElement('td');
-        amountKrwCell.textContent = investment.amountKrw.toLocaleString();
-        row.appendChild(amountKrwCell);
-
-        const actionCell = document.createElement('td');
+        // 공매도 개수와 다음 매수가가 가장 높은 값 찾기
+        const highestTargetBuy = Math.max(...shortSellInvestments.map(inv => 
+            inv.shortSellTargetBuy !== undefined ? Number(inv.shortSellTargetBuy) : 0
+        ));
         
-        if (investment.note) {
-            const noteSpan = document.createElement('span');
-            noteSpan.className = 'note-text';
-            noteSpan.textContent = investment.note;
-            actionCell.appendChild(noteSpan);
-        }
+        summaryRow.innerHTML = `
+            <td colspan="2" class="shortsell-summary-cell">
+                <span class="shortsell-count">공매도 ${shortSellInvestments.length}개</span>
+            </td>
+            <td colspan="2" class="shortsell-summary-cell">
+                <span class="shortsell-highest-target">최고 다음 매수가: ${highestTargetBuy.toFixed(2)}</span>
+            </td>
+            <td class="shortsell-summary-cell">
+                <button class="table-btn expand" onclick="expandShortSell()">펼치기</button>
+            </td>
+        `;
+        
+        tableBody.appendChild(summaryRow);
+    }
 
-        const buyTargetVal = Number(investment.exchangeRate) - settings.buyThreshold;
-        const sellTargetVal = Number(investment.exchangeRate) + settings.sellThreshold;
-
-        const buySpan = document.createElement('span');
-        buySpan.className = 'buy-target';
-        buySpan.textContent = `다음 매수가: ${buyTargetVal.toFixed(2)}`;
-        actionCell.appendChild(buySpan);
-        actionCell.appendChild(document.createElement('br'));
-
-        const sellSpan = document.createElement('span');
-        sellSpan.className = 'sell-target';
-        sellSpan.textContent = `목표 매도가: ${sellTargetVal.toFixed(2)}`;
-        actionCell.appendChild(sellSpan);
-
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'action-buttons';
-
-        const editButton = document.createElement('button');
-        editButton.textContent = '수정';
-        editButton.className = 'table-btn edit';
-        editButton.onclick = function() { editInvestment(investment.id); };
-        buttonContainer.appendChild(editButton);
-
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = '삭제';
-        deleteButton.className = 'table-btn delete';
-        deleteButton.onclick = function() { deleteInvestment(investment.id); };
-        buttonContainer.appendChild(deleteButton);
-
-        const sellButton = document.createElement('button');
-        sellButton.textContent = '매도';
-        sellButton.className = 'table-btn sell';
-        sellButton.onclick = function() { sellInvestment(investment.id); };
-        buttonContainer.appendChild(sellButton);
-
-        const shortSellButton = document.createElement('button');
-        shortSellButton.textContent = '공매도';
-        shortSellButton.className = 'table-btn shortsell';
-        shortSellButton.onclick = function() { handleShortSell(investment.id, row, actionCell); };
-        buttonContainer.appendChild(shortSellButton);
-
-        actionCell.appendChild(buttonContainer);
-        row.appendChild(actionCell);
-
-        if (investment.shortSell) {
-            row.style.backgroundColor = '#cce5ff';
-            row.classList.add('short-sell');
-            const shortSellLabel = document.createElement('span');
-            shortSellLabel.textContent = ' *공매도 중*';
-            shortSellLabel.style.color = 'blue';
-            shortSellLabel.style.fontWeight = 'bold';
-            actionCell.appendChild(shortSellLabel);
-
-            if (investment.shortSellTargetBuy !== undefined) {
-                const targetBuyDiv = document.createElement('div');
-                targetBuyDiv.textContent = `다음 매수가: ${Number(investment.shortSellTargetBuy).toFixed(2)}`;
-                targetBuyDiv.style.color = 'blue';
-                actionCell.appendChild(targetBuyDiv);
-            }
-
-            const buyButton = document.createElement('button');
-            buyButton.textContent = '매수';
-            buyButton.className = 'table-btn buy';
-            buyButton.style.fontSize = '0.6rem';
-            buyButton.style.padding = '2px 4px';
-            buyButton.onclick = function() {
-                const buyRateStr = prompt('매수 환율을 입력하세요 (100엔 기준):', '');
-                if (!buyRateStr) return;
-                const newBuyRate = Number(buyRateStr);
-                if (isNaN(newBuyRate) || newBuyRate <= 0) {
-                    alert('올바른 매수 환율을 입력해주세요.');
-                    return;
-                }
-                const newExchangeRate = investment.exchangeRate - investment.shortSellSellRate + newBuyRate;
-                const newAmountKrw = investment.amountYen * (newExchangeRate / 100);
-                db.collection('currentInvestments').doc(investment.id).update({
-                    shortSell: false,
-                    shortSellSellRate: firebase.firestore.FieldValue.delete(),
-                    shortSellTargetBuy: firebase.firestore.FieldValue.delete(),
-                    exchangeRate: newExchangeRate,
-                    amountKrw: newAmountKrw
-                }).then(() => {
-                    const index = currentInvestments.findIndex(inv => inv.id === investment.id);
-                    if (index !== -1) {
-                        currentInvestments[index].shortSell = false;
-                        currentInvestments[index].exchangeRate = newExchangeRate;
-                        currentInvestments[index].amountKrw = newAmountKrw;
-                    }
-                    updateTables();
-                }).catch(error => {
-                    console.error('매수 환율 저장 실패:', error);
-                    alert('매수 환율 저장에 실패했습니다.');
-                });
-            };
-            actionCell.appendChild(buyButton);
-        }
-
+    // 일반 투자 항목들 표시
+    normalInvestments.forEach(investment => {
+        const row = createInvestmentRow(investment);
         tableBody.appendChild(row);
     });
+
+    // 공매도 축소 모드가 아닐 때만 공매도 항목들 표시
+    if (!shortSellCollapsed) {
+        shortSellInvestments.forEach(investment => {
+            const row = createInvestmentRow(investment);
+            tableBody.appendChild(row);
+        });
+    }
     
     const historyTable = document.querySelector('#historyTable tbody');
     historyTable.innerHTML = completedInvestments.map(inv => {
@@ -400,6 +291,176 @@ function updateTables() {
             </td>
         </tr>
     `}).join('');
+}
+
+// 투자 행 생성 함수
+function createInvestmentRow(investment) {
+    const row = document.createElement('tr');
+    
+    const dateCell = document.createElement('td');
+    dateCell.textContent = new Date(investment.date).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' });
+    row.appendChild(dateCell);
+
+    const amountCell = document.createElement('td');
+    amountCell.textContent = investment.amountYen.toLocaleString();
+    row.appendChild(amountCell);
+
+    const exchangeRateCell = document.createElement('td');
+    const exchangeRateText = document.createElement('div');
+    exchangeRateText.textContent = investment.exchangeRate.toFixed(2);
+    exchangeRateCell.appendChild(exchangeRateText);
+
+    const copyButton = document.createElement('button');
+    copyButton.textContent = '복사';
+    copyButton.className = 'table-btn copy';
+    copyButton.onclick = function() {
+        navigator.clipboard.writeText(investment.exchangeRate.toFixed(2))
+            .then(() => {
+                Swal.fire({
+                    icon: 'success',
+                    title: '복사 완료',
+                    text: `${investment.exchangeRate.toFixed(2)}이(가) 클립보드에 복사되었습니다.`,
+                    timer: 1000,
+                    showConfirmButton: false
+                });
+            })
+            .catch(err => {
+                console.error('복사 실패:', err);
+                Swal.fire({
+                    icon: 'error',
+                    title: '복사 실패',
+                    text: '환율 복사에 실패했습니다.'
+                });
+            });
+    };
+    exchangeRateCell.appendChild(copyButton);
+    row.appendChild(exchangeRateCell);
+
+    const amountKrwCell = document.createElement('td');
+    amountKrwCell.textContent = investment.amountKrw.toLocaleString();
+    row.appendChild(amountKrwCell);
+
+    const actionCell = document.createElement('td');
+    
+    if (investment.note) {
+        const noteSpan = document.createElement('span');
+        noteSpan.className = 'note-text';
+        noteSpan.textContent = investment.note;
+        actionCell.appendChild(noteSpan);
+    }
+
+    const buyTargetVal = Number(investment.exchangeRate) - settings.buyThreshold;
+    const sellTargetVal = Number(investment.exchangeRate) + settings.sellThreshold;
+
+    const buySpan = document.createElement('span');
+    buySpan.className = 'buy-target';
+    buySpan.textContent = `다음 매수가: ${buyTargetVal.toFixed(2)}`;
+    actionCell.appendChild(buySpan);
+    actionCell.appendChild(document.createElement('br'));
+
+    const sellSpan = document.createElement('span');
+    sellSpan.className = 'sell-target';
+    sellSpan.textContent = `목표 매도가: ${sellTargetVal.toFixed(2)}`;
+    actionCell.appendChild(sellSpan);
+
+    const buttonContainer = document.createElement('div');
+    buttonContainer.className = 'action-buttons';
+
+    const editButton = document.createElement('button');
+    editButton.textContent = '수정';
+    editButton.className = 'table-btn edit';
+    editButton.onclick = function() { editInvestment(investment.id); };
+    buttonContainer.appendChild(editButton);
+
+    const deleteButton = document.createElement('button');
+    deleteButton.textContent = '삭제';
+    deleteButton.className = 'table-btn delete';
+    deleteButton.onclick = function() { deleteInvestment(investment.id); };
+    buttonContainer.appendChild(deleteButton);
+
+    const sellButton = document.createElement('button');
+    sellButton.textContent = '매도';
+    sellButton.className = 'table-btn sell';
+    sellButton.onclick = function() { sellInvestment(investment.id); };
+    buttonContainer.appendChild(sellButton);
+
+    const shortSellButton = document.createElement('button');
+    shortSellButton.textContent = '공매도';
+    shortSellButton.className = 'table-btn shortsell';
+    shortSellButton.onclick = function() { handleShortSell(investment.id, row, actionCell); };
+    buttonContainer.appendChild(shortSellButton);
+
+    actionCell.appendChild(buttonContainer);
+    row.appendChild(actionCell);
+
+    if (investment.shortSell) {
+        row.style.backgroundColor = '#cce5ff';
+        row.classList.add('short-sell');
+        const shortSellLabel = document.createElement('span');
+        shortSellLabel.textContent = ' *공매도 중*';
+        shortSellLabel.style.color = 'blue';
+        shortSellLabel.style.fontWeight = 'bold';
+        actionCell.appendChild(shortSellLabel);
+
+        if (investment.shortSellTargetBuy !== undefined) {
+            const targetBuyDiv = document.createElement('div');
+            targetBuyDiv.textContent = `다음 매수가: ${Number(investment.shortSellTargetBuy).toFixed(2)}`;
+            targetBuyDiv.style.color = 'blue';
+            actionCell.appendChild(targetBuyDiv);
+        }
+
+        const buyButton = document.createElement('button');
+        buyButton.textContent = '매수';
+        buyButton.className = 'table-btn buy';
+        buyButton.style.fontSize = '0.6rem';
+        buyButton.style.padding = '2px 4px';
+        buyButton.onclick = function() {
+            const buyRateStr = prompt('매수 환율을 입력하세요 (100엔 기준):', '');
+            if (!buyRateStr) return;
+            const newBuyRate = Number(buyRateStr);
+            if (isNaN(newBuyRate) || newBuyRate <= 0) {
+                alert('올바른 매수 환율을 입력해주세요.');
+                return;
+            }
+            const newExchangeRate = investment.exchangeRate - investment.shortSellSellRate + newBuyRate;
+            const newAmountKrw = investment.amountYen * (newExchangeRate / 100);
+            db.collection('currentInvestments').doc(investment.id).update({
+                shortSell: false,
+                shortSellSellRate: firebase.firestore.FieldValue.delete(),
+                shortSellTargetBuy: firebase.firestore.FieldValue.delete(),
+                exchangeRate: newExchangeRate,
+                amountKrw: newAmountKrw
+            }).then(() => {
+                const index = currentInvestments.findIndex(inv => inv.id === investment.id);
+                if (index !== -1) {
+                    currentInvestments[index].shortSell = false;
+                    currentInvestments[index].exchangeRate = newExchangeRate;
+                    currentInvestments[index].amountKrw = newAmountKrw;
+                }
+                updateTables();
+            }).catch(error => {
+                console.error('매수 환율 저장 실패:', error);
+                alert('매수 환율 저장에 실패했습니다.');
+            });
+        };
+        actionCell.appendChild(buyButton);
+    }
+
+    return row;
+}
+
+// 공매도 펼치기 함수
+function expandShortSell() {
+    shortSellCollapsed = false;
+    const toggleBtn = document.getElementById('toggleShortSell');
+    if (toggleBtn) {
+        toggleBtn.textContent = '공매도 축소';
+    }
+    
+    // 상태를 localStorage에 저장
+    localStorage.setItem('shortSellCollapsed', 'false');
+    
+    updateTables();
 }
 
 // 원금 입력을 위한 alert 창
@@ -660,10 +721,34 @@ document.addEventListener('DOMContentLoaded', async () => {
         initializeDarkMode();
         requestNotificationPermission();
         startExchangeRateUpdates();
+        initializeShortSellToggle();
     } catch (error) {
         console.error('초기 로드 중 오류 발생:', error);
     }
 });
+
+// 공매도 축소/확장 토글 초기화
+function initializeShortSellToggle() {
+    const toggleBtn = document.getElementById('toggleShortSell');
+    if (toggleBtn) {
+        // 저장된 상태 불러오기
+        const savedState = localStorage.getItem('shortSellCollapsed');
+        if (savedState !== null) {
+            shortSellCollapsed = savedState === 'true';
+            toggleBtn.textContent = shortSellCollapsed ? '공매도 확장' : '공매도 축소';
+        }
+        
+        toggleBtn.addEventListener('click', () => {
+            shortSellCollapsed = !shortSellCollapsed;
+            toggleBtn.textContent = shortSellCollapsed ? '공매도 확장' : '공매도 축소';
+            
+            // 상태를 localStorage에 저장
+            localStorage.setItem('shortSellCollapsed', shortSellCollapsed.toString());
+            
+            updateTables();
+        });
+    }
+}
 
 // 완료된 투자 수정
 async function editCompletedInvestment(id) {

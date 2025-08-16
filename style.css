@@ -370,6 +370,13 @@ body.dark-mode .current-rate p {
     color: #fff;
 }
 
+.table-btn.expand {
+    background-color: #28a745;
+    color: #fff;
+    font-size: 0.7rem;
+    padding: 4px 8px;
+}
+
 .table-btn.copy {
     background-color: #17a2b8;
     color: #fff;
@@ -434,6 +441,71 @@ body.dark-mode .note-text {
     color: #bbbbbb;
 }
 
+/* 공매도 축소/확장 버튼 스타일 */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.toggle-shortsell-btn {
+    width: auto;
+    padding: 6px 12px;
+    font-size: 0.8rem;
+    background-color: #007bff;
+    color: #ffffff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.toggle-shortsell-btn:hover {
+    background-color: #0056b3;
+}
+
+/* 공매도 요약 행 스타일 */
+.shortsell-summary-row {
+    background-color: #e3f2fd !important;
+    font-weight: bold;
+}
+
+body.dark-mode .shortsell-summary-row {
+    background-color: #1a237e !important;
+}
+
+.shortsell-summary-cell {
+    text-align: center;
+    padding: 8px 3px;
+    color: #1565c0;
+    font-size: 0.85rem;
+}
+
+body.dark-mode .shortsell-summary-cell {
+    color: #90caf9;
+}
+
+.shortsell-count {
+    font-weight: bold;
+    color: #d32f2f;
+}
+
+body.dark-mode .shortsell-count {
+    color: #ef5350;
+}
+
+.shortsell-highest-target {
+    font-weight: bold;
+    color: #388e3c;
+}
+
+body.dark-mode .shortsell-highest-target {
+    color: #81c784;
+}
+
 /* 모바일 최적화 (갤럭시 S23 기준) */
 @media screen and (max-width: 393px) {
     .container {
@@ -446,6 +518,17 @@ body.dark-mode .note-text {
     
     h2 {
         font-size: 1rem;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 8px;
+    }
+    
+    .toggle-shortsell-btn {
+        font-size: 0.75rem;
+        padding: 5px 10px;
     }
     
     .input-section {
@@ -467,6 +550,11 @@ body.dark-mode .note-text {
         font-size: 0.75rem;
     }
     
+    .shortsell-summary-cell {
+        font-size: 0.75rem;
+        padding: 6px 2px;
+    }
+    
     .card p {
         flex-direction: column;
         align-items: flex-start;
@@ -485,6 +573,11 @@ body.dark-mode .note-text {
     .table-btn.copy {
         font-size: 0.55rem;
         padding: 1px 3px;
+    }
+
+    .table-btn.expand {
+        font-size: 0.65rem;
+        padding: 3px 6px;
     }
 
     .period-settings {
