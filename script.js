@@ -639,7 +639,14 @@ async function updateSummary() {
         const firstPurchaseTime = Math.min(...completedInvestments.map(inv => new Date(inv.date).getTime()));
         const lastSellTime = Math.max(...completedInvestments.map(inv => new Date(inv.sellDate).getTime()));
         const profitStartDate = profitStartDateInput.value ? new Date(profitStartDateInput.value) : (settings.profitStartDate ? new Date(settings.profitStartDate) : new Date(firstPurchaseTime));
-        const profitEndDate = profitEndDateInput.value ? new Date(profitEndDateInput.value) : (settings.profitEndDate ? new Date(settings.profitEndDate) : new Date(lastSellTime));
+        
+        let profitEndDate;
+        if (profitEndDateInput.value) {
+            profitEndDate = new Date(profitEndDateInput.value);
+            profitEndDate.setHours(23, 59, 59, 999); // 종료일을 포함하도록 시간 설정
+        } else {
+            profitEndDate = settings.profitEndDate ? new Date(settings.profitEndDate) : new Date(lastSellTime);
+        }
 
         // 총 수익을 위한 기간 내 투자 필터링
         const profitPeriodInvestments = completedInvestments.filter(inv => {
@@ -653,7 +660,15 @@ async function updateSummary() {
 
         // 총 수익률 및 연 조정 수익률 계산을 위한 기간 설정
         const startDate = startDateInput.value ? new Date(startDateInput.value) : (settings.startDate ? new Date(settings.startDate) : new Date(firstPurchaseTime));
-        const endDate = endDateInput.value ? new Date(endDateInput.value) : (settings.endDate ? new Date(settings.endDate) : new Date(lastSellTime));
+        
+        let endDate;
+        if (endDateInput.value) {
+            endDate = new Date(endDateInput.value);
+            endDate.setHours(23, 59, 59, 999); // 종료일을 포함하도록 시간 설정
+        } else {
+            endDate = settings.endDate ? new Date(settings.endDate) : new Date(lastSellTime);
+            if (endDate) endDate.setHours(23, 59, 59, 999); // 기본값에도 시간 설정
+        }
 
         const initialCapital = settings.initialCapital || completedInvestments.reduce((sum, inv) => sum + inv.amountKrw, 0);
         document.getElementById('initialCapitalDisplay').textContent = `${initialCapital.toLocaleString()}원`;
